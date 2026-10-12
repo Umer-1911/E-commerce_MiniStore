@@ -14,7 +14,6 @@ const STEPS = [
 ] as const;
 
 export const OrderStatusTimeline: React.FC<OrderStatusTimelineProps> = ({ status }) => {
-  // If cancelled, show a dedicated cancelled banner state
   if (status === 'cancelled') {
     return (
       <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 flex items-center gap-3">
@@ -38,11 +37,11 @@ export const OrderStatusTimeline: React.FC<OrderStatusTimelineProps> = ({ status
     <div className="py-4">
       <div className="relative flex items-center justify-between w-full">
         {/* Background Connecting Bar */}
-        <div className="absolute top-1/2 left-0 right-0 -translate-y-1/2 h-1 bg-slate-200 z-0" />
+        <div className="absolute top-1/2 left-0 right-0 -translate-y-1/2 h-1 bg-stone-200 z-0" />
         
-        {/* Active Progress Bar */}
+        {/* Active Progress Bar in Pink */}
         <div
-          className="absolute top-1/2 left-0 -translate-y-1/2 h-1 bg-indigo-600 transition-all duration-500 z-0"
+          className="absolute top-1/2 left-0 -translate-y-1/2 h-1 bg-[#F45CAB] transition-all duration-500 z-0"
           style={{
             width: `${(Math.max(0, currentIndex) / (STEPS.length - 1)) * 100}%`,
           }}
@@ -58,21 +57,21 @@ export const OrderStatusTimeline: React.FC<OrderStatusTimelineProps> = ({ status
               <div
                 className={`w-9 h-9 rounded-full flex items-center justify-center border-2 transition-colors ${
                   isPassed
-                    ? 'bg-indigo-600 border-indigo-600 text-white'
+                    ? 'bg-[#03081E] border-[#03081E] text-white'
                     : isCurrent
-                    ? 'bg-white border-indigo-600 text-indigo-600 ring-4 ring-indigo-50 shadow-sm'
-                    : 'bg-white border-slate-300 text-slate-400'
+                    ? 'bg-white border-[#F45CAB] text-[#E13288] ring-4 ring-[#FFF0F7] shadow-sm'
+                    : 'bg-white border-stone-300 text-stone-400'
                 }`}
               >
                 {isPassed ? <Check className="w-4 h-4 stroke-[3]" /> : <Icon className="w-4 h-4" />}
               </div>
               <span
-                className={`mt-2 text-xs font-semibold ${
+                className={`mt-2 text-xs font-bold ${
                   isCurrent
-                    ? 'text-indigo-600'
+                    ? 'text-[#E13288]'
                     : isPassed
-                    ? 'text-slate-800'
-                    : 'text-slate-400'
+                    ? 'text-stone-800'
+                    : 'text-stone-400'
                 }`}
               >
                 {step.label}

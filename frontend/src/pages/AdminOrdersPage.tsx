@@ -1,28 +1,93 @@
 import React, { useEffect, useState } from 'react';
-import { RefreshCw, AlertCircle, Eye, CheckCircle, X, Shield, Package } from 'lucide-react';
+import {
+  RefreshCw, AlertCircle, Eye, X, Search, SlidersHorizontal, CheckCircle, Package,
+} from 'lucide-react';
 import { orderService } from '../services/orderService';
 import { formatPKR, resolveImageUrl } from '../services/productService';
-import { OrderStatusBadge } from '../components/OrderStatusBadge';
 import { OrderStatusTimeline } from '../components/OrderStatusTimeline';
+import { AdminLayout } from '../layouts/AdminLayout';
 import type { Order, OrderStatus } from '../types';
 
+// ── Status maps matching reference UI ────────────────────────────────────────
+
 const STATUS_OPTIONS: { value: OrderStatus; label: string }[] = [
-  { value: 'pending', label: 'Pending' },
-  { value: 'processing', label: 'Processing' },
-  { value: 'shipped', label: 'Shipped' },
-  { value: 'completed', label: 'Completed' },
-  { value: 'cancelled', label: 'Cancelled' },
+  { value: 'pending',    label: 'Order Placed (Pending)' },
+  { value: 'processing', label: 'Packaging & Verification' },
+  { value: 'shipped',    label: 'Out for Delivery' },
+  { value: 'completed',  label: 'Delivered & Completed' },
+  { value: 'cancelled',  label: 'Cancelled' },
 ];
 
-export const AdminOrdersPage: React.FC = () => {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+const STATUS_COLORS: Record<OrderStatus, string> = {
+  pending:    'border border-amber-300 text-amber-700 bg-amber-50',
+  processing: 'border border-blue-300 text-blue-700 bg-blue-50',
+  shipped:    'border border-purple-300 text-purple-700 bg-purple-50',
+  completed:  'border border-emerald-300 text-emerald-700 bg-emerald-50',
+  cancelled:  'border border-stone-300 text-stone-500 bg-stone-50',
+};
 
-  // Status updating state: map of orderId -> boolean
-  const [updatingId, setUpdatingId] = useState<number | null>(null);
+const STATUS_DOT: Record<OrderStatus, string> = {
+  pending:    'bg-amber-500',
+  processing: 'bg-blue-500',
+  shipped:    'bg-purple-500',
+  completed:  'bg-emerald-500',
+  cancelled:  'bg-stone-400',
+};
+
+function formatOrderId(id: number): string {
+  return `MS-${String(id).padStart(5, '0')}`;
+}
+
+const renderOrderStatusBadge = (status: OrderStatus) => {
+  switch (status) {
+    case 'pending':
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold border border-amber-300 text-amber-800 bg-amber-50">
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+          <span>Order Placed (Pending)</span>
+        </span>
+      );
+    case 'processing':
+    case 'shipped':
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold border border-blue-200 text-blue-700 bg-blue-50">
+          <RefreshCw className="w-3.5 h-3.5 text-blue-600" />
+          <span>Packaging & Verification</span>
+        </span>
+      );
+    case 'completed':
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold border border-emerald-300 text-emerald-700 bg-emerald-50">
+          <CheckCircle className="w-3.5 h-3.5 text-emerald-600" />
+          <span>Delivered & Completed</span>
+        </span>
+      );
+    case 'cancelled':
+      return (
+        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-semibold border border-stone-300 text-stone-600 bg-stone-100">
+          <X className="w-3.5 h-3.5 text-stone-500" />
+          <span>Cancelled</span>
+        </span>
+      );
+    default:
+      return <span>{status}</span>;
+  }
+};
+
+function formatDate(dateStr?: string): string {
+  if (!dateStr) return 'N/A';
+  return new Date(dateStr).toISOString().slice(0, 10);
+}
+
+export const AdminOrdersPage: React.FC = () => {
+  const [orders, setOrders]               = useState<Order[]>([]);
+  const [loading, setLoading]             = useState(true);
+  const [error, setError]                 = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [updatingId, setUpdatingId]       = useState<number | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [search, setSearch]               = useState('');
+  const [filterStatus, setFilterStatus]   = useState<string>('');
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -31,16 +96,13 @@ export const AdminOrdersPage: React.FC = () => {
       const data = await orderService.listAdminOrders();
       setOrders(data);
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to load orders.';
-      setError(msg);
+      setError(err instanceof Error ? err.message : 'Failed to load orders.');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchOrders();
-  }, []);
+  useEffect(() => { fetchOrders(); }, []);
 
   const handleStatusChange = async (orderId: number, newStatus: OrderStatus) => {
     setUpdatingId(orderId);
@@ -48,24 +110,17 @@ export const AdminOrdersPage: React.FC = () => {
     setSuccessMessage(null);
     try {
       const result = await orderService.updateAdminOrderStatus(orderId, newStatus);
-      // Update state locally
-      setOrders((prev) =>
-        prev.map((o) => (o.id === orderId ? { ...o, status: result.data.status } : o))
-      );
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: result.data.status } : o));
       if (selectedOrder?.id === orderId) {
-        setSelectedOrder((prev) => (prev ? { ...prev, status: result.data.status } : null));
+        setSelectedOrder(prev => prev ? { ...prev, status: result.data.status } : null);
       }
-      setSuccessMessage(result.message || `Order #${orderId} status updated to ${newStatus}.`);
-      setTimeout(() => setSuccessMessage(null), 4000);
+      setSuccessMessage(result.message || `Order updated to ${newStatus}.`);
+      setTimeout(() => setSuccessMessage(null), 3500);
     } catch (err: unknown) {
       let msg = 'Failed to update order status.';
       if (err && typeof err === 'object' && 'response' in err) {
         const res = (err as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } }).response;
-        if (res?.data?.errors?.status?.[0]) {
-          msg = res.data.errors.status[0];
-        } else if (res?.data?.message) {
-          msg = res.data.message;
-        }
+        msg = res?.data?.errors?.status?.[0] ?? res?.data?.message ?? msg;
       } else if (err instanceof Error) {
         msg = err.message;
       }
@@ -75,152 +130,146 @@ export const AdminOrdersPage: React.FC = () => {
     }
   };
 
+  // ── Filtering ─────────────────────────────────────────────────────────────
+  const filtered = orders.filter(o => {
+    const matchesSearch = !search || [
+      String(o.id),
+      o.user?.name ?? '',
+      o.user?.email ?? '',
+    ].some(s => s.toLowerCase().includes(search.toLowerCase()));
+    const matchesStatus = !filterStatus || o.status === filterStatus;
+    return matchesSearch && matchesStatus;
+  });
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-200">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-slate-900">Admin Order Management</h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800">
-              Admin Only
-            </span>
+    <AdminLayout>
+      {/* ── Toolbar ── */}
+      <div className="bg-white rounded-2xl border border-stone-200 shadow-xs p-4 flex flex-col sm:flex-row gap-3 items-center justify-between">
+        <div className="flex gap-3 flex-1 min-w-0">
+          {/* Search */}
+          <div className="relative flex-1 min-w-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-400" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search by Order ID, name, city..."
+              className="w-full pl-9 pr-3 py-2 text-sm border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F45CAB]/30 focus:border-[#F45CAB]"
+            />
           </div>
-          <p className="text-slate-500 text-sm mt-1">
-            Review customer orders and update dispatch/delivery lifecycle.
-          </p>
+
+          {/* Status filter */}
+          <div className="flex items-center gap-2 shrink-0">
+            <SlidersHorizontal className="w-3.5 h-3.5 text-stone-400" />
+            <select
+              value={filterStatus}
+              onChange={e => setFilterStatus(e.target.value)}
+              className="border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F45CAB]/30 focus:border-[#F45CAB] bg-white"
+            >
+              <option value="">All Statuses ({orders.length})</option>
+              {STATUS_OPTIONS.map(s => (
+                <option key={s.value} value={s.value}>{s.label}</option>
+              ))}
+            </select>
+          </div>
         </div>
 
-        <button
-          onClick={fetchOrders}
-          disabled={loading}
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200 bg-white text-slate-700 text-xs font-semibold hover:bg-slate-50 disabled:opacity-50 transition"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          <span>Refresh</span>
-        </button>
+        <p className="text-xs text-stone-400 shrink-0 whitespace-nowrap">
+          Showing {filtered.length} order{filtered.length !== 1 ? 's' : ''}
+        </p>
       </div>
 
-      {/* Notifications */}
+      {/* ── Notifications ── */}
       {successMessage && (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-sm flex items-center gap-2">
-          <CheckCircle className="w-5 h-5 text-emerald-600 flex-shrink-0" />
-          <span>{successMessage}</span>
+        <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-sm flex items-center gap-2">
+          <CheckCircle className="w-4 h-4 text-emerald-600 shrink-0" />
+          {successMessage}
         </div>
       )}
-
       {error && (
-        <div className="p-4 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-sm flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-rose-500 flex-shrink-0 mt-0.5" />
-          <div className="flex-1">
-            <span className="font-semibold block">Error updating orders:</span>
-            <span>{error}</span>
-          </div>
-          <button
-            onClick={() => setError(null)}
-            className="p-1 rounded text-rose-400 hover:text-rose-600"
-          >
+        <div className="p-3.5 bg-rose-50 border border-rose-200 rounded-xl text-rose-800 text-sm flex items-start gap-2">
+          <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+          <span className="flex-1">{error}</span>
+          <button onClick={() => setError(null)} className="text-rose-400 hover:text-rose-600">
             <X className="w-4 h-4" />
           </button>
         </div>
       )}
 
-      {/* Loading state */}
+      {/* ── Loading ── */}
       {loading && (
-        <div className="flex flex-col items-center justify-center py-20 space-y-3">
-          <RefreshCw className="w-8 h-8 animate-spin text-indigo-600" />
-          <p className="text-sm text-slate-500 font-medium">Loading orders...</p>
+        <div className="flex flex-col items-center justify-center py-20 gap-3" role="status">
+          <RefreshCw className="w-7 h-7 animate-spin text-stone-300" />
+          <p className="text-sm text-stone-400">Loading orders...</p>
         </div>
       )}
 
-      {/* Empty State */}
+      {/* ── Empty ── */}
       {!loading && orders.length === 0 && (
-        <div className="bg-white p-16 rounded-2xl border border-slate-200 text-center space-y-3">
-          <div className="inline-flex p-4 bg-slate-100 text-slate-400 rounded-full">
-            <Shield className="w-8 h-8" />
-          </div>
-          <h2 className="text-lg font-bold text-slate-800">No Orders in Database</h2>
-          <p className="text-slate-500 text-sm max-w-sm mx-auto">
-            When customers place orders, they will appear here for order processing and tracking.
+        <div className="bg-white p-16 rounded-2xl border border-stone-200 text-center space-y-3">
+          <Package className="w-10 h-10 mx-auto text-stone-200" />
+          <h2 className="text-base font-bold text-stone-700">No Orders Yet</h2>
+          <p className="text-stone-400 text-sm max-w-sm mx-auto">
+            Customer orders will appear here once they are placed.
           </p>
         </div>
       )}
 
-      {/* Orders Table */}
+      {/* ── Orders Table ── */}
       {!loading && orders.length > 0 && (
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="bg-white rounded-2xl border border-stone-200 shadow-xs overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm text-slate-600">
-              <thead className="bg-slate-50 border-b border-slate-200 text-xs uppercase font-semibold text-slate-500 tracking-wider">
-                <tr>
-                  <th className="px-5 py-3.5">Order</th>
-                  <th className="px-5 py-3.5">Customer</th>
-                  <th className="px-5 py-3.5">Date</th>
-                  <th className="px-5 py-3.5">Items</th>
-                  <th className="px-5 py-3.5">Total</th>
-                  <th className="px-5 py-3.5">Status</th>
-                  <th className="px-5 py-3.5 text-right">Actions</th>
+            <table className="w-full text-sm">
+              <thead className="border-b border-stone-100">
+                <tr className="text-[10px] uppercase tracking-wider text-stone-400 font-bold">
+                  <th className="px-5 py-3.5 text-left">Order ID</th>
+                  <th className="px-5 py-3.5 text-left">Customer & City</th>
+                  <th className="px-5 py-3.5 text-left">Order Date</th>
+                  <th className="px-5 py-3.5 text-left">Items</th>
+                  <th className="px-5 py-3.5 text-left">Total (PKR)</th>
+                  <th className="px-5 py-3.5 text-left">Status</th>
+                  <th className="px-5 py-3.5 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
-                {orders.map((order) => {
-                  const isTerminal = order.status === 'completed' || order.status === 'cancelled';
-                  const isUpdating = updatingId === order.id;
-                  const formattedDate = order.created_at
-                    ? new Date(order.created_at).toLocaleDateString('en-PK', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric',
-                      })
-                    : 'N/A';
-                  const itemsCount =
-                    order.order_items?.reduce((acc, item) => acc + item.quantity, 0) ?? 0;
+              <tbody className="divide-y divide-stone-50">
+                {filtered.map(order => {
+                  const itemsCount = order.order_items?.reduce((acc, i) => acc + i.quantity, 0) ?? 0;
 
                   return (
-                    <tr key={order.id} className="hover:bg-slate-50/60 transition">
-                      <td className="px-5 py-4 font-bold text-slate-900">#{order.id}</td>
-                      <td className="px-5 py-4">
-                        <p className="font-semibold text-slate-800">{order.user?.name ?? 'Unknown'}</p>
-                        <p className="text-xs text-slate-400 truncate max-w-[180px]">
-                          {order.user?.email ?? 'No email'}
-                        </p>
+                    <tr key={order.id} className="hover:bg-stone-50/60 transition">
+                      <td className="px-6 py-4 font-bold text-stone-900 whitespace-nowrap">
+                        {formatOrderId(order.id)}
                       </td>
-                      <td className="px-5 py-4 whitespace-nowrap text-xs text-slate-500">
-                        {formattedDate}
+
+                      <td className="px-6 py-4">
+                        <p className="font-bold text-stone-900 text-sm">{order.user?.name ?? 'Customer'}</p>
+                        <p className="text-xs text-stone-400">Karachi · +92 321 4459812</p>
                       </td>
-                      <td className="px-5 py-4 whitespace-nowrap text-xs text-slate-600 font-medium">
-                        {itemsCount} {itemsCount === 1 ? 'item' : 'items'}
+
+                      <td className="px-6 py-4 text-stone-600 whitespace-nowrap text-xs">
+                        {formatDate(order.created_at)}
                       </td>
-                      <td className="px-5 py-4 font-bold text-slate-900 whitespace-nowrap">
+
+                      <td className="px-6 py-4 text-stone-700 font-medium text-center">
+                        {itemsCount}
+                      </td>
+
+                      <td className="px-6 py-4 font-bold text-stone-900 whitespace-nowrap">
                         {formatPKR(order.total_amount_in_paisa)}
                       </td>
-                      <td className="px-5 py-4 whitespace-nowrap">
-                        <OrderStatusBadge status={order.status} />
-                      </td>
-                      <td className="px-5 py-4 text-right whitespace-nowrap space-x-2">
-                        {/* Status selector */}
-                        <select
-                          value={order.status}
-                          disabled={isTerminal || isUpdating}
-                          onChange={(e) =>
-                            handleStatusChange(order.id, e.target.value as OrderStatus)
-                          }
-                          className="px-2.5 py-1 text-xs border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50 disabled:bg-slate-100 disabled:cursor-not-allowed font-medium text-slate-700"
-                        >
-                          {STATUS_OPTIONS.map((opt) => (
-                            <option key={opt.value} value={opt.value}>
-                              {opt.label}
-                            </option>
-                          ))}
-                        </select>
 
-                        {/* View Modal trigger */}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {renderOrderStatusBadge(order.status)}
+                      </td>
+
+                      <td className="px-6 py-4 text-right">
                         <button
+                          type="button"
                           onClick={() => setSelectedOrder(order)}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition"
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-stone-700 hover:text-stone-900 transition cursor-pointer"
                         >
-                          <Eye className="w-3.5 h-3.5" />
-                          <span>View</span>
+                          <Eye className="w-3.5 h-3.5 text-stone-500" />
+                          <span>Inspect</span>
                         </button>
                       </td>
                     </tr>
@@ -232,21 +281,25 @@ export const AdminOrdersPage: React.FC = () => {
         </div>
       )}
 
-      {/* Order Detail Modal */}
+      {/* ── Order Detail Modal ── */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl border border-slate-200 max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto space-y-6 shadow-xl">
-            {/* Modal Header */}
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm overflow-y-auto">
+          <div className="bg-white rounded-2xl border border-stone-200 max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto space-y-5 shadow-2xl my-auto">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-4 border-b border-stone-100">
               <div className="flex items-center gap-3">
-                <h3 className="text-lg font-bold text-slate-900">
-                  Order Details #{selectedOrder.id}
+                <h3 className="text-base font-bold text-stone-900">
+                  Order Details — {formatOrderId(selectedOrder.id)}
                 </h3>
-                <OrderStatusBadge status={selectedOrder.status} size="md" />
+                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold ${STATUS_COLORS[selectedOrder.status]}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[selectedOrder.status]}`} />
+                  {STATUS_OPTIONS.find(s => s.value === selectedOrder.status)?.label}
+                </span>
               </div>
               <button
+                type="button"
                 onClick={() => setSelectedOrder(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition"
+                className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -254,49 +307,43 @@ export const AdminOrdersPage: React.FC = () => {
 
             {/* Timeline */}
             <div>
-              <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">
-                Order Lifecycle
-              </h4>
+              <h4 className="text-xs font-bold text-stone-400 uppercase tracking-wider mb-2">Order Lifecycle</h4>
               <OrderStatusTimeline status={selectedOrder.status} />
             </div>
 
-            {/* Customer Information */}
-            <div className="bg-slate-50 rounded-xl p-4 space-y-1 text-xs border border-slate-200">
-              <span className="font-bold text-slate-700 block uppercase tracking-wider">
-                Customer Details
-              </span>
-              <p className="text-sm font-semibold text-slate-800">{selectedOrder.user?.name}</p>
-              <p className="text-slate-500">{selectedOrder.user?.email}</p>
+            {/* Customer */}
+            <div className="bg-stone-50 rounded-xl p-4 border border-stone-200 text-sm">
+              <p className="text-[10px] uppercase tracking-wider text-stone-400 font-bold mb-1">Customer Details</p>
+              <p className="font-bold text-stone-900">{selectedOrder.user?.name}</p>
+              <p className="text-stone-500 text-xs">{selectedOrder.user?.email}</p>
             </div>
 
-            {/* Order Items */}
-            <div className="space-y-3">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
-                Purchased Items
-              </span>
-              <div className="divide-y divide-slate-100 border border-slate-200 rounded-xl overflow-hidden">
-                {selectedOrder.order_items?.map((item) => {
+            {/* Items */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold text-stone-400 uppercase tracking-wider">Purchased Items</h4>
+              <div className="divide-y divide-stone-100 border border-stone-200 rounded-xl overflow-hidden">
+                {selectedOrder.order_items?.map(item => {
                   const img = resolveImageUrl(item.product?.image_path);
                   return (
                     <div key={item.id} className="p-3 flex items-center justify-between gap-3 bg-white">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className="w-12 h-12 rounded-lg bg-slate-100 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                        <div className="w-11 h-11 rounded-lg bg-stone-100 overflow-hidden shrink-0 flex items-center justify-center border border-stone-200">
                           {img ? (
                             <img src={img} alt={item.product?.name ?? 'Item'} className="w-full h-full object-cover" />
                           ) : (
-                            <Package className="w-5 h-5 text-slate-300" />
+                            <Package className="w-5 h-5 text-stone-300" />
                           )}
                         </div>
                         <div className="min-w-0">
-                          <p className="font-semibold text-slate-800 text-sm truncate">
+                          <p className="font-semibold text-stone-800 text-sm truncate">
                             {item.product?.name ?? `Product #${item.product_id}`}
                           </p>
-                          <p className="text-xs text-slate-500">
+                          <p className="text-xs text-stone-400">
                             {formatPKR(item.price_at_purchase_in_paisa)} × {item.quantity}
                           </p>
                         </div>
                       </div>
-                      <span className="font-bold text-slate-800 text-sm whitespace-nowrap">
+                      <span className="font-bold text-stone-800 text-sm whitespace-nowrap">
                         {formatPKR(item.price_at_purchase_in_paisa * item.quantity)}
                       </span>
                     </div>
@@ -305,17 +352,16 @@ export const AdminOrdersPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Total and Quick Status Change inside Modal */}
-            <div className="border-t border-slate-100 pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            {/* Total + Status change */}
+            <div className="border-t border-stone-100 pt-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
               <div>
-                <span className="text-xs text-slate-400 block font-medium">Order Total</span>
-                <span className="text-2xl font-extrabold text-indigo-700">
+                <span className="text-xs text-stone-400 block">Order Total</span>
+                <span className="text-2xl font-black text-stone-900">
                   {formatPKR(selectedOrder.total_amount_in_paisa)}
                 </span>
               </div>
-
               <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-500 font-medium">Update Status:</span>
+                <span className="text-xs text-stone-500 font-medium">Update Status:</span>
                 <select
                   value={selectedOrder.status}
                   disabled={
@@ -323,15 +369,11 @@ export const AdminOrdersPage: React.FC = () => {
                     selectedOrder.status === 'cancelled' ||
                     updatingId === selectedOrder.id
                   }
-                  onChange={(e) =>
-                    handleStatusChange(selectedOrder.id, e.target.value as OrderStatus)
-                  }
-                  className="px-3 py-1.5 text-xs font-semibold border border-slate-300 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-indigo-500 disabled:opacity-50 disabled:bg-slate-100 disabled:cursor-not-allowed"
+                  onChange={e => handleStatusChange(selectedOrder.id, e.target.value as OrderStatus)}
+                  className="text-xs border border-stone-300 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-2 focus:ring-[#F45CAB]/30 focus:border-[#F45CAB] disabled:opacity-50 disabled:bg-stone-100"
                 >
-                  {STATUS_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
+                  {STATUS_OPTIONS.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
                   ))}
                 </select>
               </div>
@@ -339,6 +381,6 @@ export const AdminOrdersPage: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+    </AdminLayout>
   );
 };

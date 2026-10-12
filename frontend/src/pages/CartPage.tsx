@@ -13,6 +13,9 @@ export const CartPage: React.FC = () => {
 
   const totalItems = getTotalItems();
   const subtotal   = getSubtotal();
+  // Standard delivery flat fee in paisa (PKR 250)
+  const deliveryFeePaisa = totalItems === 0 ? 0 : 25000;
+  const finalTotalPaisa = subtotal + deliveryFeePaisa;
 
   const handleProceedToCheckout = () => {
     if (!isAuthenticated) {
@@ -26,18 +29,18 @@ export const CartPage: React.FC = () => {
   if (items.length === 0) {
     return (
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-12 space-y-6">
-        <div className="bg-white p-12 sm:p-16 rounded-3xl border border-slate-200/90 text-center space-y-4 shadow-xs">
-          <div className="inline-flex p-5 bg-emerald-50 text-emerald-600 rounded-full">
+        <div className="bg-white p-12 sm:p-16 rounded-3xl border border-[#E9DCE4] text-center space-y-4 shadow-xs">
+          <div className="inline-flex p-5 bg-[#FFF0F7] text-[#E13288] rounded-full">
             <ShoppingCart className="w-10 h-10" />
           </div>
-          <h2 className="text-xl sm:text-2xl font-black text-slate-800">Your Cart is Empty</h2>
-          <p className="text-slate-500 text-xs sm:text-sm max-w-sm mx-auto">
-            Explore our fresh organic groceries, premium lawn wear, and artisan treasures!
+          <h2 className="text-xl sm:text-2xl font-black text-stone-900">Your Basket is Empty</h2>
+          <p className="text-stone-500 text-xs sm:text-sm max-w-sm mx-auto">
+            Explore our fresh organic groceries, premium lawn wear, and artisan crafts
           </p>
           <div className="pt-2">
             <Link
               to="/products"
-              className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-xs font-bold bg-[#0b3b2c] text-white hover:bg-emerald-800 transition shadow-sm"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-xs font-bold bg-[#F45CAB] hover:bg-[#03081E] text-white transition shadow-sm"
             >
               <ArrowLeft className="w-4 h-4" />
               Start Shopping
@@ -52,18 +55,18 @@ export const CartPage: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-slate-200">
+      <div className="flex items-center justify-between pb-4 border-b border-[#E9DCE4]">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">Shopping Cart</h1>
-          <p className="text-slate-500 text-xs sm:text-sm mt-0.5">
-            {totalItems} {totalItems === 1 ? 'item' : 'items'} in your cart
+          <h1 className="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight">Shopping Basket</h1>
+          <p className="text-stone-500 text-xs sm:text-sm mt-0.5">
+            {totalItems} {totalItems === 1 ? 'item' : 'items'} in your basket
           </p>
         </div>
         <button
           onClick={clearCart}
-          className="text-xs font-semibold text-rose-600 hover:text-rose-800 hover:underline transition"
+          className="text-xs font-semibold text-rose-600 hover:text-rose-800 hover:underline transition cursor-pointer"
         >
-          Clear cart
+          Clear basket
         </button>
       </div>
 
@@ -77,15 +80,15 @@ export const CartPage: React.FC = () => {
             return (
               <div
                 key={item.productId}
-                className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-5 flex gap-4 transition hover:border-emerald-200"
+                className="bg-white border border-[#E9DCE4] rounded-2xl p-4 sm:p-5 flex gap-4 transition hover:border-[#F45CAB]/50"
               >
                 {/* Image */}
-                <div className="w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 rounded-xl bg-slate-50 overflow-hidden flex items-center justify-center border border-slate-100">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 flex-shrink-0 rounded-xl bg-stone-50 overflow-hidden flex items-center justify-center border border-stone-100">
                   <ProductImage
                     imagePath={item.image_path}
                     alt={item.name}
                     className="w-full h-full object-cover"
-                    fallbackClassName="w-8 h-8 text-emerald-300"
+                    fallbackClassName="w-8 h-8 text-[#F45CAB]"
                   />
                 </div>
 
@@ -94,46 +97,48 @@ export const CartPage: React.FC = () => {
                   <div className="flex justify-between items-start gap-2">
                     <Link
                       to={`/products/${item.productId}`}
-                      className="font-bold text-slate-800 text-sm sm:text-base hover:text-emerald-700 transition truncate"
+                      className="font-bold text-stone-900 text-sm sm:text-base hover:text-[#E13288] transition truncate"
                     >
                       {item.name}
                     </Link>
                     <button
                       onClick={() => removeFromCart(item.productId)}
-                      className="text-slate-400 hover:text-rose-600 p-1 transition rounded-lg hover:bg-rose-50"
+                      className="text-stone-400 hover:text-rose-600 p-1 transition rounded-lg hover:bg-rose-50 cursor-pointer"
                       title="Remove item"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
 
-                  <p className="text-xs text-slate-400">
+                  <p className="text-xs text-stone-500 font-mono">
                     Unit Price: {formatPKR(item.price_in_paisa)}
                   </p>
 
                   <div className="flex items-center justify-between pt-1">
                     {/* Quantity controls */}
-                    <div className="flex items-center gap-1 border border-slate-200 rounded-xl bg-slate-50 p-0.5">
+                    <div className="flex items-center gap-1 border border-stone-200 rounded-xl bg-stone-50 p-0.5">
                       <button
                         onClick={() => updateQuantity(item.productId, item.quantity - 1)}
                         disabled={item.quantity <= 1}
-                        className="p-1 rounded-lg hover:bg-white text-slate-600 disabled:opacity-30 transition"
+                        className="p-1 rounded-lg hover:bg-white text-stone-600 disabled:opacity-30 transition cursor-pointer"
+                        aria-label="Decrease quantity"
                       >
                         <Minus className="w-3.5 h-3.5" />
                       </button>
-                      <span className="w-8 text-center text-xs font-bold text-slate-800">
+                      <span className="w-8 text-center text-xs font-bold text-stone-900 font-mono">
                         {item.quantity}
                       </span>
                       <button
                         onClick={() => updateQuantity(item.productId, item.quantity + 1)}
                         disabled={maxReached}
-                        className="p-1 rounded-lg hover:bg-white text-slate-600 disabled:opacity-30 transition"
+                        className="p-1 rounded-lg hover:bg-white text-stone-600 disabled:opacity-30 transition cursor-pointer"
+                        aria-label="Increase quantity"
                       >
                         <Plus className="w-3.5 h-3.5" />
                       </button>
                     </div>
 
-                    <span className="font-extrabold text-sm sm:text-base text-emerald-950">
+                    <span className="font-black text-sm sm:text-base text-[#E13288]">
                       {formatPKR(lineTotal)}
                     </span>
                   </div>
@@ -151,39 +156,39 @@ export const CartPage: React.FC = () => {
 
         {/* Order Summary */}
         <div className="space-y-4">
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-4 shadow-sm">
-            <h2 className="font-black text-slate-900 text-lg">Order Summary</h2>
+          <div className="bg-white border border-[#E9DCE4] rounded-3xl p-6 space-y-4 shadow-xs">
+            <h2 className="font-black text-stone-900 text-lg">Order Summary</h2>
 
-            <div className="space-y-2 text-xs sm:text-sm text-slate-600 divide-y divide-slate-100">
+            <div className="space-y-2 text-xs sm:text-sm text-stone-600 divide-y divide-stone-100">
               <div className="flex justify-between pb-2">
                 <span>Items ({totalItems})</span>
-                <span className="font-semibold text-slate-900">{formatPKR(subtotal)}</span>
+                <span className="font-semibold text-stone-900 font-mono">{formatPKR(subtotal)}</span>
               </div>
               <div className="flex justify-between py-2">
-                <span>Shipping</span>
-                <span className="font-semibold text-emerald-600">FREE</span>
+                <span>Standard Delivery Fee</span>
+                <span className="font-semibold text-stone-900 font-mono">{formatPKR(deliveryFeePaisa)}</span>
               </div>
-              <div className="flex justify-between pt-3 text-base font-black text-slate-900">
+              <div className="flex justify-between pt-3 text-base font-black text-stone-900">
                 <span>Total</span>
-                <span className="text-xl font-black text-emerald-950">{formatPKR(subtotal)}</span>
+                <span className="text-xl font-black text-[#E13288] font-mono">{formatPKR(finalTotalPaisa)}</span>
               </div>
             </div>
 
             <button
               onClick={handleProceedToCheckout}
-              className="w-full py-3.5 px-4 rounded-2xl bg-[#0b3b2c] hover:bg-emerald-800 text-white font-extrabold text-xs sm:text-sm transition shadow-md"
+              className="w-full py-3.5 px-4 rounded-full bg-[#028643] hover:bg-[#03081E] text-white font-extrabold text-xs sm:text-sm transition shadow-md cursor-pointer"
             >
               Proceed to Checkout
             </button>
 
-            <div className="space-y-2 pt-2 border-t border-slate-100 text-[11px] text-slate-500">
+            <div className="space-y-2 pt-2 border-t border-stone-100 text-[11px] text-stone-500">
               <div className="flex items-center gap-2">
-                <Truck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                <span>Free delivery across Pakistan</span>
+                <Truck className="w-4 h-4 text-[#E13288] flex-shrink-0" />
+                <span>Flat PKR 250 standard delivery nationwide</span>
               </div>
               <div className="flex items-center gap-2">
-                <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                <span>Cash on delivery payment</span>
+                <ShieldCheck className="w-4 h-4 text-[#E13288] flex-shrink-0" />
+                <span>Cash on Delivery payment upon safe handover</span>
               </div>
             </div>
           </div>

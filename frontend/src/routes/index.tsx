@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, Navigate } from 'react-router-dom';
 import { RootLayout } from '../layouts/RootLayout';
 import { HomePage } from '../pages/HomePage';
 import { LoginPage } from '../pages/LoginPage';
@@ -13,6 +13,7 @@ import { OrderDetailPage } from '../pages/OrderDetailPage';
 import { AdminOrdersPage } from '../pages/AdminOrdersPage';
 import { AdminTestPage } from '../pages/AdminTestPage';
 import { AdminProductsPage } from '../pages/AdminProductsPage';
+import { AdminDashboardPage } from '../pages/AdminDashboardPage';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 
 export const router = createBrowserRouter([
@@ -85,6 +86,22 @@ export const router = createBrowserRouter([
         ),
       },
       // Admin Routes
+      {
+        path: 'admin',
+        element: (
+          <ProtectedRoute requireAdmin>
+            <Navigate to="/admin/dashboard" replace />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: 'admin/dashboard',
+        element: (
+          <ProtectedRoute requireAdmin>
+            <AdminDashboardPage />
+          </ProtectedRoute>
+        ),
+      },
       {
         path: 'admin/orders',
         element: (

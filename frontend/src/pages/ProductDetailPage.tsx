@@ -1,8 +1,20 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Minus, Plus, ShoppingCart, CheckCircle, ShieldCheck, Truck, RotateCcw } from 'lucide-react';
+import {
+  ArrowLeft,
+  Minus,
+  Plus,
+  ShoppingCart,
+  CheckCircle,
+  ShieldCheck,
+  Truck,
+  MapPin,
+  Star,
+  Share2,
+} from 'lucide-react';
 import { useProductStore } from '../store/useProductStore';
 import { useCartStore } from '../store/useCartStore';
+import { useAppStore } from '../store/useAppStore';
 import { formatPKR } from '../services/productService';
 import { ProductImage } from '../components/ProductImage';
 
@@ -11,6 +23,7 @@ export const ProductDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const { detail, detailLoading, detailError, fetchProduct } = useProductStore();
   const { addToCart, items } = useCartStore();
+  const { showNotification } = useAppStore();
 
   const [qty, setQty] = useState(1);
   const [addedFlash, setAddedFlash] = useState(false);
@@ -19,23 +32,26 @@ export const ProductDetailPage: React.FC = () => {
     if (id) fetchProduct(Number(id));
   }, [id, fetchProduct]);
 
-  useEffect(() => { setQty(1); }, [detail?.id]);
+  useEffect(() => {
+    setQty(1);
+  }, [detail?.id]);
 
   if (detailLoading) {
     return (
-      <div className="flex justify-center items-center py-24">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-emerald-600" />
+      <div className="flex flex-col justify-center items-center py-24 space-y-3" role="status">
+        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-[#F45CAB]" />
+        <span className="text-xs text-stone-500 font-medium">Loading product details...</span>
       </div>
     );
   }
 
   if (detailError || !detail) {
     return (
-      <div className="text-center py-16 space-y-4 max-w-md mx-auto">
-        <p className="text-rose-600 text-sm">{detailError ?? 'Product not found.'}</p>
+      <div className="text-center py-16 space-y-4 max-w-md mx-auto px-4">
+        <p className="text-rose-600 text-sm font-semibold">{detailError ?? 'Product not found.'}</p>
         <button
           onClick={() => navigate('/products')}
-          className="px-5 py-2.5 rounded-full bg-[#0b3b2c] text-white text-xs font-bold hover:bg-emerald-800 transition"
+          className="px-6 py-2.5 rounded-full bg-[#03081E] text-white text-xs font-bold hover:bg-[#F45CAB] transition cursor-pointer"
         >
           Back to Catalog
         </button>
@@ -44,11 +60,12 @@ export const ProductDetailPage: React.FC = () => {
   }
 
   const inStock = detail.stock_quantity > 0;
-  const alreadyInCart = items.find(i => i.productId === detail.id)?.quantity ?? 0;
+  const alreadyInCart = items.find((i) => i.productId === detail.id)?.quantity ?? 0;
   const canAddMore = Math.max(0, detail.stock_quantity - alreadyInCart);
   const maxQty = Math.max(1, canAddMore);
 
   const handleAddToCart = () => {
+    if (!inStock || canAddMore === 0) return;
     addToCart(
       {
         productId: detail.id,
@@ -61,164 +78,210 @@ export const ProductDetailPage: React.FC = () => {
     );
     setQty(1);
     setAddedFlash(true);
+    showNotification(`Added ${qty} × ${detail.name} to your basket!`);
     setTimeout(() => setAddedFlash(false), 2000);
   };
 
-  return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
-      {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-xs text-slate-500">
-        <Link to="/products" className="flex items-center gap-1 hover:text-emerald-700 transition">
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>All Products</span>
-        </Link>
-        <span>/</span>
-        <span className="text-slate-400">{detail.category || 'General'}</span>
-        <span>/</span>
-        <span className="text-slate-800 font-bold truncate">{detail.name}</span>
-      </nav>
+  const handleShare = () => {
+    navigator.clipboard?.writeText(window.location.href);
+    showNotification('Product link copied to clipboard');
+  };
 
-      {/* Main Product Section */}
-      <div className="bg-white border border-slate-200/90 rounded-3xl p-6 sm:p-10 shadow-sm grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
+  return (
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 space-y-12">
+      {/* Navigation Breadcrumb */}
+      <div className="flex items-center justify-between border-b border-[#E9DCE4] pb-4 gap-3">
+        <button
+          onClick={() => navigate('/products')}
+          className="w-8 h-8 rounded-full border border-stone-200 hover:border-[#03081E] hover:bg-[#03081E] hover:text-white flex items-center justify-center text-stone-700 transition cursor-pointer shrink-0"
+          aria-label="Go back"
+        >
+          <ArrowLeft className="w-4 h-4" />
+        </button>
+
+        <div className="flex items-center gap-1.5 text-xs text-stone-500 min-w-0 overflow-hidden">
+          <Link to="/" className="shrink-0 hover:text-stone-800">Home</Link>
+          <span className="shrink-0 text-stone-300">/</span>
+          <Link
+            to={`/products?category=${encodeURIComponent(detail.category || '')}`}
+            className="shrink-0 hover:text-stone-800"
+          >
+            {detail.category || 'General'}
+          </Link>
+          <span className="shrink-0 text-stone-300">/</span>
+          <span className="text-stone-900 font-medium truncate">{detail.name}</span>
+        </div>
+      </div>
+
+      {/* Main Product Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
         {/* Left: Product Image */}
-        <div className="aspect-square bg-slate-50 rounded-2xl overflow-hidden border border-slate-100 flex items-center justify-center p-4">
-          <ProductImage
-            imagePath={detail.image_path}
-            alt={detail.name}
-            className="w-full h-full object-contain object-center"
-            fallbackClassName="w-16 h-16 text-emerald-400"
-          />
+        <div className="lg:col-span-7 space-y-4">
+          <div className="aspect-square bg-white rounded-2xl overflow-hidden border border-[#E9DCE4] flex items-center justify-center p-6 shadow-xs">
+            <ProductImage
+              imagePath={detail.image_path}
+              alt={detail.name}
+              className="w-full h-full object-contain object-center"
+              fallbackClassName="w-20 h-20 text-[#F45CAB]"
+            />
+          </div>
         </div>
 
-        {/* Right: Product Details */}
-        <div className="space-y-6 flex flex-col justify-between">
-          <div className="space-y-3">
-            {detail.category && (
-              <span className="inline-block px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
-                {detail.category}
+        {/* Right: Contiguous Purchase Module */}
+        <div className="lg:col-span-5 bg-white border border-[#E9DCE4] rounded-2xl p-6 sm:p-8 space-y-6 shadow-xs">
+          <div>
+            <div className="flex items-center gap-2 text-xs text-stone-500 mb-2">
+              <span className="flex items-center gap-1 text-stone-700">
+                <MapPin className="w-3.5 h-3.5 text-[#E13288]" />
+                <span>Pakistan Origin</span>
               </span>
-            )}
+              <span>·</span>
+              <span className="font-semibold text-[#A93870]">{detail.category || 'General'}</span>
+            </div>
 
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-snug">
+            <h1 className="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight leading-tight">
               {detail.name}
             </h1>
 
-            {/* Price */}
-            <div className="flex items-baseline gap-3 pt-1">
-              <span className="text-3xl font-black text-emerald-950">
+            <div className="flex items-center gap-2 mt-2.5">
+              <div className="flex items-center text-amber-400">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Star key={i} className="w-3.5 h-3.5 fill-amber-400" />
+                ))}
+              </div>
+              <span className="text-xs font-semibold text-stone-800">Verified Stock</span>
+            </div>
+          </div>
+
+          {/* Pricing */}
+          <div className="pt-4 border-t border-[#F2ECE1]">
+            <div className="flex items-baseline gap-3">
+              <span className="text-3xl font-black text-[#E13288] tracking-tight">
                 {formatPKR(detail.price_in_paisa)}
               </span>
-              <span className="text-xs text-slate-400 line-through">
-                {formatPKR(Math.round(detail.price_in_paisa * 1.25))}
-              </span>
-              <span className="px-2 py-0.5 rounded text-[11px] font-bold bg-rose-50 text-rose-600 border border-rose-100">
-                Save 20%
-              </span>
             </div>
-
-            {/* Stock pill */}
-            <div className="pt-1">
-              {inStock ? (
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  In Stock ({detail.stock_quantity} available)
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 text-xs font-bold text-rose-700 bg-rose-50 px-2.5 py-1 rounded-full">
-                  <span className="w-2 h-2 rounded-full bg-rose-500" />
-                  Sold Out
-                </span>
-              )}
-            </div>
-
-            {/* Description */}
-            <div className="pt-3 border-t border-slate-100">
-              <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider mb-1.5">
-                About this item
-              </h3>
-              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-                {detail.description || 'Authentic Pakistani store item produced with natural quality and craftsmanship.'}
-              </p>
-            </div>
+            <p className="text-[11px] text-stone-500 mt-1">
+              Inclusive of all domestic provincial duties and artisan packaging.
+            </p>
           </div>
 
-          {/* Quantity selector & Add to cart button */}
-          <div className="space-y-4 pt-4 border-t border-slate-100">
-            {alreadyInCart > 0 && (
-              <p className="text-xs text-amber-700 bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-200">
-                You already have <strong>{alreadyInCart}</strong> in your cart.
-              </p>
+          {/* Stock Indicator */}
+          <div className="text-xs">
+            {inStock ? (
+              <div className="flex items-center gap-1.5 text-emerald-800 font-medium">
+                <span className="w-2 h-2 rounded-full bg-emerald-600" />
+                <span>
+                  {detail.stock_quantity < 10
+                    ? `Artisan batch low: Only ${detail.stock_quantity} units remain`
+                    : `In Stock: ${detail.stock_quantity} available in database`}
+                </span>
+              </div>
+            ) : (
+              <div className="text-rose-700 font-medium">
+                Out of Stock
+              </div>
             )}
+          </div>
 
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-              {/* Counter */}
-              <div className="flex items-center justify-between border border-slate-200 rounded-2xl bg-slate-50 px-3 py-1.5 w-full sm:w-36">
-                <button
-                  type="button"
-                  onClick={() => setQty(q => Math.max(1, q - 1))}
-                  disabled={qty <= 1 || !inStock}
-                  className="p-1.5 rounded-lg hover:bg-white text-slate-600 disabled:opacity-30 transition"
-                >
-                  <Minus className="w-4 h-4" />
-                </button>
-                <span className="font-extrabold text-sm text-slate-900">{qty}</span>
-                <button
-                  type="button"
-                  onClick={() => setQty(q => Math.min(maxQty, q + 1))}
-                  disabled={qty >= canAddMore || !inStock}
-                  className="p-1.5 rounded-lg hover:bg-white text-slate-600 disabled:opacity-30 transition"
-                >
-                  <Plus className="w-4 h-4" />
-                </button>
+          {/* Quantity Selector & Purchase Actions */}
+          {inStock && (
+            <div className="space-y-4 pt-2">
+              {alreadyInCart > 0 && (
+                <p className="text-xs text-amber-800 bg-amber-50 px-3 py-2 rounded-xl border border-amber-200 font-medium">
+                  You already have <strong>{alreadyInCart}</strong> of this item in your shopping basket.
+                </p>
+              )}
+
+              <div className="flex items-center gap-4">
+                <span className="text-xs font-medium text-stone-700">Quantity:</span>
+                <div className="flex items-center border border-stone-200 rounded-lg bg-stone-50">
+                  <button
+                    type="button"
+                    onClick={() => setQty((q) => Math.max(1, q - 1))}
+                    disabled={qty <= 1}
+                    className="p-2 text-stone-600 hover:text-stone-900 disabled:opacity-30 cursor-pointer"
+                    aria-label="Decrease quantity"
+                  >
+                    <Minus className="w-3.5 h-3.5" />
+                  </button>
+                  <span className="w-10 text-center text-xs font-mono font-semibold text-stone-900">
+                    {qty}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setQty((q) => Math.min(maxQty, q + 1))}
+                    disabled={qty >= canAddMore}
+                    className="p-2 text-stone-600 hover:text-stone-900 disabled:opacity-30 cursor-pointer"
+                    aria-label="Increase quantity"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               </div>
 
-              {/* Add to cart CTA */}
-              <button
-                type="button"
-                onClick={handleAddToCart}
-                disabled={!inStock || canAddMore === 0}
-                className={`flex-1 py-3 px-6 rounded-2xl text-xs sm:text-sm font-extrabold transition-all duration-200 flex items-center justify-center gap-2 shadow-md ${
-                  addedFlash
-                    ? 'bg-emerald-600 text-white'
-                    : !inStock || canAddMore === 0
-                    ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
-                    : 'bg-[#0b3b2c] hover:bg-emerald-800 text-white'
-                }`}
-              >
-                {addedFlash ? (
-                  <>
-                    <CheckCircle className="w-4 h-4 stroke-[3]" />
-                    <span>Added to Cart!</span>
-                  </>
-                ) : !inStock ? (
-                  <span>Out of Stock</span>
-                ) : canAddMore === 0 ? (
-                  <span>Max Stock Reached</span>
-                ) : (
-                  <>
-                    <ShoppingCart className="w-4 h-4" />
-                    <span>Add to Cart</span>
-                  </>
-                )}
-              </button>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={handleAddToCart}
+                  disabled={canAddMore === 0}
+                  className={`flex-1 py-3.5 px-6 rounded-full font-bold text-xs sm:text-sm text-white shadow-md hover:shadow-xl transition-all duration-300 flex items-center justify-center gap-2 cursor-pointer ${
+                    addedFlash
+                      ? 'bg-[#028643]'
+                      : canAddMore === 0
+                      ? 'bg-stone-300 cursor-not-allowed'
+                      : 'bg-[#F45CAB] hover:bg-[#03081E]'
+                  }`}
+                >
+                  {addedFlash ? (
+                    <>
+                      <CheckCircle className="w-4 h-4 stroke-[3]" />
+                      <span>Added to Basket</span>
+                    </>
+                  ) : canAddMore === 0 ? (
+                    <span>Maximum Stock in Basket</span>
+                  ) : (
+                    <>
+                      <ShoppingCart className="w-4 h-4" />
+                      <span>Add to Basket</span>
+                    </>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleShare}
+                  className="p-3 rounded-full border border-stone-200 text-stone-600 hover:text-[#03081E] hover:border-[#03081E] hover:bg-white transition cursor-pointer shrink-0"
+                  title="Share product"
+                >
+                  <Share2 className="w-4 h-4" />
+                </button>
+              </div>
             </div>
+          )}
 
-            {/* Quality Badges */}
-            <div className="grid grid-cols-3 gap-2 pt-3 border-t border-slate-100 text-[11px] text-slate-500">
-              <div className="flex items-center gap-1.5">
-                <ShieldCheck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                <span>100% Authentic</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <Truck className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                <span>Free Delivery</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <RotateCcw className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-                <span>7-Day Return</span>
-              </div>
+          {/* Micro Trust Points */}
+          <div className="pt-4 border-t border-[#F2ECE1] space-y-2.5 text-xs text-stone-600">
+            <div className="flex items-center gap-2.5">
+              <Truck className="w-4 h-4 text-[#E13288] shrink-0" />
+              <span>Cash on Delivery available nationwide via express courier.</span>
+            </div>
+            <div className="flex items-center gap-2.5">
+              <ShieldCheck className="w-4 h-4 text-[#E13288] shrink-0" />
+              <span>Direct regional origin guarantee with 7-day exchange window.</span>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Description & Specifications */}
+      <div className="bg-white border border-[#E9DCE4] rounded-2xl p-6 sm:p-8 space-y-6">
+        <div>
+          <h3 className="text-lg font-bold text-stone-900 pb-3 border-b border-stone-100">
+            Craftsmanship Story and Details
+          </h3>
+          <p className="text-sm text-stone-700 leading-relaxed mt-4 max-w-4xl whitespace-pre-line">
+            {detail.description || 'Authentic Pakistani store item produced with natural quality and craftsmanship.'}
+          </p>
         </div>
       </div>
     </div>

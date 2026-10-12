@@ -2,310 +2,482 @@ import React, { useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
 import {
   ShoppingBag,
-  ShoppingCart,
-  Search,
+  User,
+  Menu,
+  X,
   MapPin,
-  LogIn,
-  UserPlus,
+  ChevronDown,
   LogOut,
+  PackageCheck,
+  Search,
+  Tag,
   Shield,
-  HelpCircle,
-  Sparkles,
+  Package,
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { useCartStore } from '../store/useCartStore';
+import { useAppStore } from '../store/useAppStore';
+
+const CATEGORY_ITEMS = [
+  { name: 'Food & Groceries', path: '/products?category=Food%20%26%20Groceries' },
+  { name: 'Clothing', path: '/products?category=Clothing' },
+  { name: 'Home Decor', path: '/products?category=Home%20Decor' },
+  { name: 'Footwear', path: '/products?category=Footwear' },
+  { name: 'Handicrafts', path: '/products?category=Handicrafts' },
+];
 
 export const Navbar: React.FC = () => {
   const { user, isAuthenticated, logout } = useAuthStore();
-  const { getTotalItems } = useCartStore();
+  const cartItems = useCartStore((state) => state.items);
+  const clearCart = useCartStore((state) => state.clearCart);
+  const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const { toggleCartDrawer, deliveryLocation, setDeliveryLocation } = useAppStore();
   const navigate = useNavigate();
-  const cartCount = getTotalItems();
 
-  const [headerSearch, setHeaderSearch] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [categoriesDropdownOpen, setCategoriesDropdownOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [headerSearchInput, setHeaderSearchInput] = useState('');
+  const [locationModalOpen, setLocationModalOpen] = useState(false);
+  const [newLocationInput, setNewLocationInput] = useState(deliveryLocation);
 
   const handleLogout = async () => {
     await logout();
+    clearCart();                  // wipe persisted cart on sign-out
+    setUserDropdownOpen(false);
+    setMobileMenuOpen(false);
     navigate('/');
   };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (headerSearch.trim()) {
-      navigate(`/products?search=${encodeURIComponent(headerSearch.trim())}`);
+    if (headerSearchInput.trim()) {
+      navigate(`/products?search=${encodeURIComponent(headerSearchInput.trim())}`);
+      setSearchOpen(false);
+      setMobileMenuOpen(false);
     } else {
       navigate('/products');
     }
   };
 
+  const handleLocationSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newLocationInput.trim()) {
+      setDeliveryLocation(newLocationInput.trim());
+      setLocationModalOpen(false);
+    }
+  };
+
   return (
-    <header className="sticky top-0 z-50 bg-white shadow-xs">
-      {/* 1. Top Notice Bar — Match reference emerald dark green bar */}
-      <div className="bg-[#0b3b2c] text-white py-1.5 px-4 text-center text-xs font-medium tracking-wide">
-        <span>Welcome offer — </span>
-        <span className="text-amber-300 font-bold underline decoration-amber-300/60">
-          20% off
-        </span>
-        <span> your first order with code </span>
-        <span className="font-mono bg-white/15 px-1.5 py-0.5 rounded text-amber-200 font-bold text-[11px]">
-          MINIFRESH20
-        </span>
-      </div>
+    <>
+      {/* 1. TOP ANNOUNCEMENT & LOCATION BAR */}
+      <aside aria-label="Announcement and location bar" className="bg-[#FAF7F5] border-b border-[#EAE4DC] text-xs text-stone-700">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2 flex flex-col md:flex-row md:items-center justify-between gap-2">
+          {/* Promo offer without dash punctuation */}
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-stone-800">
+              Get 5% Off your first order, <strong className="text-[#E13288] font-bold">Promo: ORDERS</strong>
+            </span>
+          </div>
 
-      {/* 2. Main Brand & Search Bar */}
-      <div className="border-b border-slate-100 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5">
-          <div className="flex items-center justify-between gap-4 sm:gap-6">
-            {/* Brand Logo */}
-            <Link to="/" className="flex items-center gap-2 group flex-shrink-0">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-700 flex items-center justify-center text-white shadow-sm transition-transform group-hover:scale-105">
-                <ShoppingBag className="w-5 h-5 stroke-[2.5]" />
-              </div>
-              <div>
-                <span className="text-xl sm:text-2xl font-black text-[#0b3b2c] tracking-tight">
-                  Mini<span className="text-emerald-600">Store</span>
-                </span>
-                <span className="block text-[10px] font-semibold text-amber-600 uppercase tracking-widest leading-none -mt-0.5">
-                  Fresh & Quality
-                </span>
-              </div>
-            </Link>
-
-            {/* Central Search Bar */}
-            <form
-              onSubmit={handleSearchSubmit}
-              className="flex-1 max-w-xl mx-2 sm:mx-6 hidden md:block"
-            >
-              <div className="relative">
-                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input
-                  type="text"
-                  value={headerSearch}
-                  onChange={(e) => setHeaderSearch(e.target.value)}
-                  placeholder="Search fresh groceries & authentic Pakistani products..."
-                  className="w-full pl-10 pr-24 py-2.5 bg-slate-50 border border-slate-200/90 rounded-full text-xs sm:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition"
-                />
-                <button
-                  type="submit"
-                  className="absolute right-1.5 top-1/2 -translate-y-1/2 px-4 py-1.5 rounded-full text-xs font-bold bg-[#0b3b2c] text-white hover:bg-emerald-700 transition"
-                >
-                  Search
-                </button>
-              </div>
-            </form>
-
-            {/* Right Controls: Delivery, Cart, User */}
-            <div className="flex items-center gap-3 sm:gap-5 flex-shrink-0">
-              {/* Delivery location info */}
-              <div className="hidden lg:flex items-center gap-2 text-left pl-2 pr-1 border-r border-slate-200">
-                <div className="p-2 rounded-full bg-emerald-50 text-emerald-700">
-                  <MapPin className="w-4 h-4" />
-                </div>
-                <div className="leading-tight">
-                  <span className="text-[10px] text-slate-400 block font-medium">Deliver to</span>
-                  <span className="text-xs font-bold text-slate-800">Pakistan Wide</span>
-                </div>
-              </div>
-
-              {/* Cart Button with Count Badge */}
-              <Link
-                to="/cart"
-                className="relative flex items-center gap-2 p-2 sm:px-3 sm:py-2 rounded-xl bg-slate-50 hover:bg-emerald-50 border border-slate-200/70 hover:border-emerald-200 transition group"
-                title="View Shopping Cart"
+          {/* Location Selector */}
+          <div className="flex items-center justify-between md:justify-end gap-3 sm:gap-6">
+            <div className="flex items-center gap-1.5 text-[11px] sm:text-xs">
+              <MapPin className="w-3.5 h-3.5 text-stone-600 shrink-0" />
+              <span className="font-medium text-stone-900 truncate max-w-[140px] sm:max-w-[200px]">
+                {deliveryLocation}
+              </span>
+              <button
+                type="button"
+                onClick={() => setLocationModalOpen(true)}
+                className="font-semibold underline ml-1 cursor-pointer text-[#E13288]"
               >
-                <div className="relative">
-                  <ShoppingCart className="w-5 h-5 text-slate-700 group-hover:text-emerald-700 transition" />
-                  {cartCount > 0 && (
-                    <span className="absolute -top-2 -right-2.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-emerald-600 text-white text-[10px] font-extrabold px-1 leading-none shadow-xs animate-scale-in">
-                      {cartCount > 99 ? '99+' : cartCount}
-                    </span>
-                  )}
-                </div>
-                <span className="hidden sm:inline text-xs font-bold text-slate-700 group-hover:text-emerald-800">
-                  Cart
-                </span>
-              </Link>
+                Change Location
+              </button>
+            </div>
+          </div>
+        </div>
+      </aside>
 
-              {/* User Authentication state */}
-              {isAuthenticated ? (
-                <div className="flex items-center gap-2 sm:gap-3">
-                  <div className="hidden sm:flex flex-col text-right">
-                    <span className="text-xs font-bold text-slate-900 leading-tight">
-                      {user?.name}
-                    </span>
-                    {user?.role === 'admin' ? (
-                      <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
-                        Administrator
-                      </span>
-                    ) : (
-                      <span className="text-[10px] text-slate-400">Customer</span>
-                    )}
+      {/* 2. MAIN NAVIGATION BAR */}
+      <header className="sticky top-0 z-40 bg-white border-b border-[#EDE6DC] shadow-xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-18 flex items-center justify-between gap-4">
+          
+          {/* Brand Logo & Mobile Trigger */}
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="md:hidden p-2 text-stone-700 hover:text-stone-900 rounded-md"
+              aria-label="Toggle navigation menu"
+              aria-expanded={mobileMenuOpen}
+            >
+              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            </button>
+
+            <Link
+              to="/"
+              className="flex items-center gap-1.5 text-left cursor-pointer group"
+            >
+              <span className="text-2xl sm:text-3xl font-black tracking-tight text-stone-900">
+                Mini<span className="text-[#F45CAB]">Store</span>
+              </span>
+            </Link>
+          </div>
+
+          {/* Nav Links: Home, Shop, Categories, Deals, Search, Track Order */}
+          <nav className="hidden md:flex items-center gap-1.5 lg:gap-2 text-xs sm:text-sm font-bold text-stone-700">
+            <NavLink
+              to="/"
+              end
+              className={({ isActive }) =>
+                `px-3.5 py-2 rounded-full transition-all duration-300 cursor-pointer ${
+                  isActive
+                    ? 'bg-[#F45CAB] text-white shadow-md shadow-[#F45CAB]/30'
+                    : 'hover:bg-stone-100 hover:shadow-xs text-stone-800'
+                }`
+              }
+            >
+              Home
+            </NavLink>
+
+            <NavLink
+              to="/products"
+              className={({ isActive }) =>
+                `px-3.5 py-2 rounded-full transition-all duration-300 cursor-pointer ${
+                  isActive
+                    ? 'bg-[#F45CAB] text-white shadow-md shadow-[#F45CAB]/30'
+                    : 'hover:bg-stone-100 hover:shadow-xs text-stone-800'
+                }`
+              }
+            >
+              Shop
+            </NavLink>
+
+            {/* Categories with Dropdown */}
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setCategoriesDropdownOpen(!categoriesDropdownOpen)}
+                className="px-3.5 py-2 rounded-full hover:bg-stone-100 hover:shadow-xs text-stone-800 transition-all duration-300 cursor-pointer inline-flex items-center gap-1"
+              >
+                <span>Categories</span>
+                <ChevronDown className="w-3.5 h-3.5 opacity-70" />
+              </button>
+
+              {categoriesDropdownOpen && (
+                <div className="absolute top-full left-0 mt-1 w-52 bg-white rounded-xl border border-stone-200 shadow-xl py-2 z-50 text-xs font-semibold">
+                  <div className="px-3 py-1.5 text-[11px] uppercase tracking-wider text-stone-400 font-bold border-b border-stone-100">
+                    Product Categories
                   </div>
-                  <button
-                    onClick={handleLogout}
-                    className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition border border-transparent hover:border-rose-100"
-                    title="Logout"
-                  >
-                    <LogOut className="w-4 h-4" />
-                  </button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
+                  {CATEGORY_ITEMS.map((cat) => (
+                    <Link
+                      key={cat.name}
+                      to={cat.path}
+                      onClick={() => setCategoriesDropdownOpen(false)}
+                      className="w-full text-left px-3.5 py-2 hover:bg-stone-50 text-stone-800 flex items-center justify-between"
+                    >
+                      <span>{cat.name}</span>
+                      <span className="text-[10px] text-stone-400 font-mono">Explore</span>
+                    </Link>
+                  ))}
+                  <div className="border-t border-stone-100 my-1" />
                   <Link
-                    to="/login"
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-700 hover:text-emerald-700 hover:bg-slate-50 transition"
+                    to="/products"
+                    onClick={() => setCategoriesDropdownOpen(false)}
+                    className="block w-full text-left px-3.5 py-1.5 text-stone-500 hover:text-stone-900 text-[11px]"
                   >
-                    <span className="flex items-center gap-1">
-                      <LogIn className="w-3.5 h-3.5" />
-                      <span>Sign In</span>
-                    </span>
-                  </Link>
-                  <Link
-                    to="/signup"
-                    className="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-[#0b3b2c] text-white hover:bg-emerald-700 transition shadow-xs flex items-center gap-1"
-                  >
-                    <UserPlus className="w-3.5 h-3.5" />
-                    <span>Sign Up</span>
+                    View All Collections
                   </Link>
                 </div>
               )}
             </div>
+
+            {/* Deals */}
+            <Link
+              to="/products"
+              className="px-3.5 py-2 rounded-full hover:bg-stone-100 hover:shadow-xs text-stone-800 transition-all duration-300 cursor-pointer inline-flex items-center gap-1"
+            >
+              <Tag className="w-3.5 h-3.5 text-amber-500" />
+              <span>Deals</span>
+            </Link>
+
+            {/* Search Trigger in Header */}
+            <button
+              type="button"
+              onClick={() => setSearchOpen(!searchOpen)}
+              className={`px-3.5 py-2 rounded-full transition-all duration-300 cursor-pointer inline-flex items-center gap-1.5 ${
+                searchOpen ? 'bg-stone-100 text-stone-900 shadow-xs' : 'hover:bg-stone-100 hover:shadow-xs text-stone-800'
+              }`}
+              title="Search catalog"
+            >
+              <Search className="w-3.5 h-3.5 text-stone-600" />
+              <span>Search</span>
+            </button>
+
+            {/* Track Order / Orders */}
+            {user?.role === 'customer' && (
+              <NavLink
+                to="/orders"
+                className={({ isActive }) =>
+                  `px-3.5 py-2 rounded-full transition-all duration-300 cursor-pointer ${
+                    isActive
+                      ? 'bg-[#F45CAB] text-white shadow-md shadow-[#F45CAB]/30'
+                      : 'hover:bg-stone-100 hover:shadow-xs text-stone-800'
+                  }`
+                }
+              >
+                Track Order
+              </NavLink>
+            )}
+
+            {user?.role === 'admin' && (
+              <NavLink
+                to="/admin/dashboard"
+                className={({ isActive }) =>
+                  `px-3.5 py-2 rounded-full transition-all duration-300 cursor-pointer flex items-center gap-1 font-bold ${
+                    isActive
+                      ? 'bg-[#028643] text-white shadow-md shadow-emerald-900/30'
+                      : 'hover:bg-emerald-50 text-emerald-800'
+                  }`
+                }
+              >
+                <Shield className="w-3.5 h-3.5" />
+                <span>Admin Console</span>
+              </NavLink>
+            )}
+          </nav>
+
+          {/* Right Action: Basket Button & User Button */}
+          <div className="flex items-center gap-2 sm:gap-3">
+            {/* Main Header Basket Button (Icon Only, prominent in size) */}
+            <button
+              type="button"
+              onClick={toggleCartDrawer}
+              className="relative p-2.5 rounded-full bg-stone-100 hover:bg-[#F45CAB] hover:text-white text-stone-900 shadow-xs hover:shadow-xl hover:shadow-[#F45CAB]/25 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 transition-all duration-300 cursor-pointer flex items-center justify-center group"
+              aria-label={`Open basket with ${cartCount} items`}
+              title="Shopping Basket"
+            >
+              <ShoppingBag className="w-5 h-5 stroke-[2.2] group-hover:scale-110 transition-transform" />
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-[#E13288] text-white text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center border-2 border-white shadow-xs">
+                  {cartCount}
+                </span>
+              )}
+            </button>
+
+            {/* User Profile or Sign In */}
+            {isAuthenticated ? (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                  className="flex items-center gap-2 py-2 px-3 sm:px-4 rounded-full bg-[#03081E] text-white hover:bg-[#F45CAB] text-xs sm:text-sm font-bold shadow-md hover:shadow-xl hover:shadow-[#F45CAB]/25 transition-all duration-300 cursor-pointer"
+                >
+                  <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center">
+                    <User className="w-3 h-3 text-white" />
+                  </div>
+                  <span className="hidden sm:inline truncate max-w-[100px]">{user?.name?.split(' ')[0]}</span>
+                  <span className="text-[11px] opacity-75 font-normal">Account</span>
+                  <ChevronDown className="w-3 h-3" />
+                </button>
+
+                {userDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-52 bg-white rounded-xl border border-stone-200 shadow-xl py-2 z-50 text-xs font-medium">
+                    <div className="px-4 py-2.5 border-b border-stone-100">
+                      <p className="font-bold text-stone-900 text-sm truncate">{user?.role === 'admin' ? 'Store Admin' : user?.name}</p>
+                      <p className="text-xs text-stone-400 truncate">{user?.email}</p>
+                    </div>
+
+                    {user?.role === 'customer' && (
+                      <Link
+                        to="/orders"
+                        onClick={() => setUserDropdownOpen(false)}
+                        className="w-full text-left px-4 py-2 hover:bg-stone-50 flex items-center gap-2 text-stone-700"
+                      >
+                        <PackageCheck className="w-4 h-4 text-stone-400" />
+                        <span>Order History and Tracking</span>
+                      </Link>
+                    )}
+
+                    {user?.role === 'admin' && (
+                      <Link
+                        to="/admin/dashboard"
+                        onClick={() => setUserDropdownOpen(false)}
+                        className="w-full text-left px-4 py-2.5 hover:bg-emerald-50 text-[#028643] font-bold flex items-center gap-2.5"
+                      >
+                        <Shield className="w-4 h-4 text-[#028643]" />
+                        <span>Admin Console</span>
+                      </Link>
+                    )}
+
+                    <div className="border-t border-stone-100 my-0.5" />
+
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="w-full text-left px-4 py-2.5 hover:bg-rose-50 text-[#e11d48] flex items-center gap-2.5 font-bold cursor-pointer"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>Sign Out</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link
+                to="/login"
+                className="flex items-center gap-1.5 py-2 px-3 sm:px-4 rounded-full bg-[#03081E] text-white hover:bg-[#F45CAB] text-xs sm:text-sm font-bold shadow-md hover:shadow-xl hover:shadow-[#F45CAB]/25 transition-all duration-300 cursor-pointer shrink-0"
+              >
+                <div className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center">
+                  <User className="w-3.5 h-3.5 text-white" />
+                </div>
+                <span className="hidden sm:inline">Sign In</span>
+              </Link>
+            )}
           </div>
 
-          {/* Mobile search bar */}
-          <form onSubmit={handleSearchSubmit} className="mt-3 md:hidden">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-              <input
-                type="text"
-                value={headerSearch}
-                onChange={(e) => setHeaderSearch(e.target.value)}
-                placeholder="Search products..."
-                className="w-full pl-9 pr-20 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-              />
+        </div>
+
+        {/* Expanded Header Search Bar */}
+        {searchOpen && (
+          <div className="border-t border-stone-200 bg-[#FAF7F5] px-4 py-3">
+            <div className="max-w-3xl mx-auto flex items-center gap-2">
+              <form onSubmit={handleSearchSubmit} className="flex-1 flex items-center bg-white border border-stone-300 rounded-full px-4 py-2 shadow-xs focus-within:ring-2 focus-within:ring-[#F45CAB]">
+                <Search className="w-4 h-4 text-stone-400 mr-2 shrink-0" />
+                <input
+                  type="text"
+                  autoFocus
+                  value={headerSearchInput}
+                  onChange={(e) => setHeaderSearchInput(e.target.value)}
+                  placeholder="Search products by name or category..."
+                  className="w-full text-xs sm:text-sm text-stone-900 placeholder:text-stone-400 bg-transparent focus:outline-none"
+                />
+                {headerSearchInput && (
+                  <button
+                    type="button"
+                    onClick={() => setHeaderSearchInput('')}
+                    className="text-stone-400 hover:text-stone-700 p-0.5 cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </form>
               <button
                 type="submit"
-                className="absolute right-1 top-1/2 -translate-y-1/2 px-3 py-1 rounded-md text-[11px] font-bold bg-[#0b3b2c] text-white"
+                onClick={handleSearchSubmit}
+                className="px-4 py-2 bg-[#03081E] text-white text-xs font-bold rounded-full hover:bg-[#F45CAB] cursor-pointer transition"
               >
                 Search
               </button>
-            </div>
-          </form>
-        </div>
-      </div>
-
-      {/* 3. Secondary Navigation Bar — Fresh Grocery Links */}
-      <div className="border-b border-slate-200/80 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-11 text-xs">
-            <nav className="flex items-center gap-1 sm:gap-2 overflow-x-auto py-1 no-scrollbar">
-              <NavLink
-                to="/"
-                end
-                className={({ isActive }) =>
-                  `px-3 py-1 rounded-full font-bold transition-colors whitespace-nowrap ${
-                    isActive
-                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                      : 'text-slate-600 hover:text-emerald-700'
-                  }`
-                }
+              <button
+                type="button"
+                onClick={() => setSearchOpen(false)}
+                className="p-2 text-stone-500 hover:text-stone-800 cursor-pointer"
+                title="Close search"
               >
-                Home
-              </NavLink>
-
-              <NavLink
-                to="/products"
-                className={({ isActive }) =>
-                  `px-3 py-1 rounded-full font-semibold transition-colors whitespace-nowrap ${
-                    isActive
-                      ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                      : 'text-slate-600 hover:text-emerald-700'
-                  }`
-                }
-              >
-                All Products
-              </NavLink>
-
-              <NavLink
-                to="/products?category=Food%20%26%20Groceries"
-                className="px-2.5 py-1 rounded-full font-medium text-slate-600 hover:text-emerald-700 whitespace-nowrap"
-              >
-                Groceries & Food
-              </NavLink>
-
-              <NavLink
-                to="/products?category=Clothing"
-                className="px-2.5 py-1 rounded-full font-medium text-slate-600 hover:text-emerald-700 whitespace-nowrap"
-              >
-                Clothing & Shawls
-              </NavLink>
-
-              <NavLink
-                to="/products?category=Home%20Decor"
-                className="px-2.5 py-1 rounded-full font-medium text-slate-600 hover:text-emerald-700 whitespace-nowrap"
-              >
-                Home & Craft
-              </NavLink>
-
-              {user?.role === 'customer' && (
-                <NavLink
-                  to="/orders"
-                  className={({ isActive }) =>
-                    `px-3 py-1 rounded-full font-bold transition-colors whitespace-nowrap ${
-                      isActive
-                        ? 'bg-emerald-50 text-emerald-800 border border-emerald-200'
-                        : 'text-slate-600 hover:text-emerald-700'
-                    }`
-                  }
-                >
-                  My Orders
-                </NavLink>
-              )}
-
-              {user?.role === 'admin' && (
-                <div className="flex items-center gap-1 pl-2 border-l border-slate-200">
-                  <NavLink
-                    to="/admin/products"
-                    className={({ isActive }) =>
-                      `px-2.5 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${
-                        isActive
-                          ? 'bg-amber-100 text-amber-900 border border-amber-300'
-                          : 'text-amber-800 hover:bg-amber-50'
-                      }`
-                    }
-                  >
-                    <Shield className="w-3.5 h-3.5" />
-                    <span>Admin Products</span>
-                  </NavLink>
-                  <NavLink
-                    to="/admin/orders"
-                    className={({ isActive }) =>
-                      `px-2.5 py-1 rounded-full font-bold transition-colors flex items-center gap-1 ${
-                        isActive
-                          ? 'bg-amber-100 text-amber-900 border border-amber-300'
-                          : 'text-amber-800 hover:bg-amber-50'
-                      }`
-                    }
-                  >
-                    <Shield className="w-3.5 h-3.5" />
-                    <span>Admin Orders</span>
-                  </NavLink>
-                </div>
-              )}
-            </nav>
-
-            <div className="hidden md:flex items-center gap-4 text-slate-500 font-medium">
-              <span className="flex items-center gap-1 text-emerald-700 font-semibold">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                <span>100% Authentic Quality</span>
-              </span>
-              <span className="flex items-center gap-1 hover:text-slate-700 cursor-pointer">
-                <HelpCircle className="w-3.5 h-3.5" />
-                <span>Help & Support</span>
-              </span>
+                <X className="w-5 h-5" />
+              </button>
             </div>
           </div>
+        )}
+
+        {/* Mobile menu dropdown */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t border-stone-200 bg-white px-4 py-4 space-y-3">
+            <div className="grid grid-cols-2 gap-2 text-xs font-bold text-stone-800">
+              <Link
+                to="/"
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-3 rounded-lg bg-stone-50 text-left hover:bg-stone-100"
+              >
+                Home
+              </Link>
+              <Link
+                to="/products"
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-3 rounded-lg bg-stone-50 text-left hover:bg-stone-100"
+              >
+                Shop Catalog
+              </Link>
+              <button
+                type="button"
+                onClick={() => {
+                  setMobileMenuOpen(false);
+                  toggleCartDrawer();
+                }}
+                className="p-3 rounded-lg bg-stone-50 text-left hover:bg-stone-100 flex items-center gap-1.5 cursor-pointer"
+              >
+                <ShoppingBag className="w-3.5 h-3.5 text-stone-500" />
+                <span>Cart ({cartCount})</span>
+              </button>
+              {user?.role === 'customer' && (
+                <Link
+                  to="/orders"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-3 rounded-lg bg-stone-50 text-left hover:bg-stone-100 flex items-center gap-1.5"
+                >
+                  <Package className="w-3.5 h-3.5 text-stone-500" />
+                  <span>My Orders</span>
+                </Link>
+              )}
+            </div>
+
+            {/* Category links in mobile menu */}
+            <div className="pt-2 border-t border-stone-100">
+              <span className="text-[11px] font-bold text-stone-400 uppercase tracking-wider block mb-2">
+                Shop by Category
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {CATEGORY_ITEMS.map((cat) => (
+                  <Link
+                    key={cat.name}
+                    to={cat.path}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="text-xs px-2.5 py-1 rounded bg-stone-100 hover:bg-stone-200 text-stone-700"
+                  >
+                    {cat.name}
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </header>
+
+      {/* Location Modal */}
+      {locationModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+          <div className="bg-white rounded-2xl p-6 max-w-sm w-full space-y-4 shadow-xl">
+            <div className="flex justify-between items-center">
+              <h3 className="font-bold text-base text-stone-900">Change Delivery Address</h3>
+              <button
+                type="button"
+                onClick={() => setLocationModalOpen(false)}
+                className="text-stone-400 hover:text-stone-700 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <form onSubmit={handleLocationSave} className="space-y-3">
+              <input
+                type="text"
+                value={newLocationInput}
+                onChange={(e) => setNewLocationInput(e.target.value)}
+                placeholder="e.g. Gulberg III, Lahore, Pakistan"
+                className="w-full text-xs border border-stone-300 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-[#E13288]"
+              />
+              <button
+                type="submit"
+                className="w-full py-2.5 rounded-lg text-white font-bold text-xs bg-[#F45CAB] hover:bg-[#E13288] transition cursor-pointer"
+              >
+                Save Location
+              </button>
+            </form>
+          </div>
         </div>
-      </div>
-    </header>
+      )}
+    </>
   );
 };

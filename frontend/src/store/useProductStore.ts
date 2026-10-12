@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { productService } from '../services/productService';
 import type { PaginatedProducts, Product, ProductFilters, ProductFormPayload } from '../types';
+import { useCartStore } from './useCartStore';
 
 interface ProductState {
   // Catalog state
@@ -107,7 +108,21 @@ export const useProductStore = create<ProductState>((set, get) => ({
     set({ mutating: true, mutateError: null });
     try {
       await productService.remove(id);
-      set({ mutating: false });
+      // Optimistically remove from in-memory catalog so all mounted views update immediately
+      set(state => ({
+        mutating: false,
+        catalog: state.catalog
+          ? {
+              ...state.catalog,
+              data: state.catalog.data.filter(p => p.id !== id),
+              total: Math.max(0, state.catalog.total - 1),
+            }
+          : null,
+        // Also clear detail if it was the deleted product
+        detail: state.detail?.id === id ? null : state.detail,
+      }));
+      // Remove the product from the customer's cart (if present) so stale items don't linger
+      useCartStore.getState().removeFromCart(id);
     } catch (err) {
       set({ mutating: false, mutateError: parseError(err) });
       throw err;

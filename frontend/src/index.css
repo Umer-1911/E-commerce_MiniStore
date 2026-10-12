@@ -1,9 +1,54 @@
 @import "tailwindcss";
 
 @layer base {
-  body {
-    @apply bg-slate-50 text-slate-900 antialiased min-h-screen;
-    margin: 0;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  :root {
+    --primary: #F45CAB;
+    --primary-dark: #A93870;
+    --primary-light: #F7B0DA;
+    --primary-subtle: #FFF0F7;
+    --accent: #E13288;
+    --soft-white: #FFF9FC;
+    --surface-white: #FFFFFF;
+    --text-dark: #252126;
+    --text-muted: #6F6870;
+    --border-color: #E9DCE4;
+    --success-green: #028643;
+    --error-red: #D64545;
+    --banner-stat: #F45CAB;
+    --header-bg: #FFFFFF;
+    --footer-bg: #000000;
   }
+
+  body {
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    background-color: var(--soft-white);
+    color: var(--text-dark);
+    margin: 0;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--soft-white);
+}
+::-webkit-scrollbar-thumb {
+  background: #D9CEDB;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #C4B2C7;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }

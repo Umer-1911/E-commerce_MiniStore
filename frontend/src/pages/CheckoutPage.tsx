@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { ArrowLeft, ShoppingBag, ShieldAlert, AlertCircle, Loader2, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, ShoppingBag, ShieldAlert, AlertCircle, Loader2, CheckCircle2, ShieldCheck, Truck } from 'lucide-react';
 import { useCartStore } from '../store/useCartStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { orderService } from '../services/orderService';
@@ -25,14 +25,14 @@ export const CheckoutPage: React.FC = () => {
         <div className="inline-flex p-3 bg-amber-50 text-amber-600 rounded-full">
           <ShieldAlert className="w-8 h-8" />
         </div>
-        <h2 className="text-xl font-bold text-slate-900">Admin Account Detected</h2>
-        <p className="text-slate-600 text-sm">
+        <h2 className="text-xl font-bold text-stone-900">Admin Account Detected</h2>
+        <p className="text-stone-600 text-sm">
           Administrator accounts cannot create customer orders. Please sign in with a customer account to proceed with checkout.
         </p>
         <div className="pt-2">
           <Link
             to="/products"
-            className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-semibold hover:bg-slate-800 transition"
+            className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#03081E] text-white rounded-full text-xs font-semibold hover:bg-[#F45CAB] transition"
           >
             Back to Products
           </Link>
@@ -44,21 +44,21 @@ export const CheckoutPage: React.FC = () => {
   // If cart is empty
   if (items.length === 0) {
     return (
-      <div className="max-w-xl mx-auto my-8 p-12 bg-white rounded-2xl border border-slate-200 shadow-sm text-center space-y-4">
-        <div className="inline-flex p-4 bg-indigo-50 text-indigo-500 rounded-full">
+      <div className="max-w-xl mx-auto my-8 p-12 bg-white rounded-2xl border border-[#E9DCE4] shadow-sm text-center space-y-4">
+        <div className="inline-flex p-4 bg-[#FFF0F7] text-[#E13288] rounded-full">
           <ShoppingBag className="w-8 h-8" />
         </div>
-        <h2 className="text-xl font-bold text-slate-800">Your Cart is Empty</h2>
-        <p className="text-slate-500 text-sm">
+        <h2 className="text-xl font-bold text-stone-900">Your Basket is Empty</h2>
+        <p className="text-stone-500 text-sm">
           Please add items to your cart before proceeding to checkout.
         </p>
         <div>
           <Link
             to="/products"
-            className="inline-flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-semibold hover:bg-indigo-700 transition"
+            className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#F45CAB] hover:bg-[#03081E] text-white rounded-full text-xs font-semibold transition"
           >
             <ArrowLeft className="w-4 h-4" />
-            Browse Catalog
+            <span>Browse Catalog</span>
           </Link>
         </div>
       </div>
@@ -66,41 +66,28 @@ export const CheckoutPage: React.FC = () => {
   }
 
   const handlePlaceOrder = async () => {
-    if (submitting) return; // double-submit protection
-
-    setSubmitting(true);
     setErrorMessage(null);
+    setSubmitting(true);
 
     try {
-      // Send ONLY product_id and quantity — never trust frontend prices or totals
-      const payload = {
-        items: items.map(item => ({
-          product_id: item.productId,
-          quantity: item.quantity,
+      const orderPayload = {
+        items: items.map(i => ({
+          product_id: i.productId,
+          quantity: i.quantity,
         })),
       };
 
-      const response = await orderService.createOrder(payload);
-
-      // On success, clear the cart and navigate to confirmation
+      const response = await orderService.createOrder(orderPayload);
       clearCart();
       navigate('/order-confirmation', {
         state: { order: response.data },
         replace: true,
       });
-    } catch (err: unknown) {
-      // On failure, preserve cart and show error message
-      let msg = 'Failed to place order. Please try again.';
-      if (err && typeof err === 'object' && 'response' in err) {
-        const res = (err as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } }).response;
-        if (res?.data?.errors?.items?.[0]) {
-          msg = res.data.errors.items[0];
-        } else if (res?.data?.message) {
-          msg = res.data.message;
-        }
-      } else if (err instanceof Error) {
-        msg = err.message;
-      }
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        'Failed to place order. Please review your cart items and try again.';
       setErrorMessage(msg);
     } finally {
       setSubmitting(false);
@@ -108,21 +95,21 @@ export const CheckoutPage: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-slate-200">
+      <div className="flex items-center justify-between pb-4 border-b border-[#E9DCE4]">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Review & Checkout</h1>
-          <p className="text-slate-500 text-sm mt-1">
+          <h1 className="text-2xl font-bold text-stone-900">Review and Checkout</h1>
+          <p className="text-stone-500 text-sm mt-1">
             Review your order items and confirm purchase.
           </p>
         </div>
         <Link
           to="/cart"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-indigo-600 transition"
+          className="inline-flex items-center gap-1.5 text-xs font-medium text-stone-600 hover:text-[#E13288] transition"
         >
           <ArrowLeft className="w-4 h-4" />
-          Back to Cart
+          <span>Back to Basket</span>
         </Link>
       </div>
 
@@ -140,50 +127,50 @@ export const CheckoutPage: React.FC = () => {
         {/* Left Column: Customer details & Items */}
         <div className="lg:col-span-2 space-y-6">
           {/* Customer Card */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-2">
-            <h2 className="font-semibold text-slate-800 text-sm uppercase tracking-wider text-slate-500">
+          <div className="bg-white border border-[#E9DCE4] rounded-2xl p-5 space-y-2">
+            <h2 className="font-semibold text-xs uppercase tracking-wider text-stone-500">
               Customer Information
             </h2>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between text-sm pt-1">
               <div>
-                <span className="font-bold text-slate-800">{user?.name}</span>
-                <span className="text-slate-500 block text-xs">{user?.email}</span>
+                <span className="font-bold text-stone-900">{user?.name}</span>
+                <span className="text-stone-500 block text-xs">{user?.email}</span>
               </div>
-              <span className="mt-2 sm:mt-0 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 inline-block w-fit">
+              <span className="mt-2 sm:mt-0 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-800 border border-emerald-200 inline-block w-fit">
                 Verified Customer
               </span>
             </div>
           </div>
 
           {/* Items Review */}
-          <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4">
-            <h2 className="font-semibold text-slate-800 text-sm uppercase tracking-wider text-slate-500">
+          <div className="bg-white border border-[#E9DCE4] rounded-2xl p-5 space-y-4">
+            <h2 className="font-semibold text-xs uppercase tracking-wider text-stone-500">
               Order Items ({totalItems})
             </h2>
 
-            <div className="divide-y divide-slate-100">
+            <div className="divide-y divide-stone-100">
               {items.map(item => {
                 const lineTotal = item.price_in_paisa * item.quantity;
 
                 return (
                   <div key={item.productId} className="py-3 flex items-center justify-between gap-4">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-14 h-14 rounded-xl bg-slate-50 overflow-hidden flex-shrink-0 flex items-center justify-center border border-slate-100">
+                      <div className="w-14 h-14 rounded-xl bg-stone-50 overflow-hidden flex-shrink-0 flex items-center justify-center border border-stone-100">
                         <ProductImage
                           imagePath={item.image_path}
                           alt={item.name}
                           className="w-full h-full object-cover"
-                          fallbackClassName="w-6 h-6 text-emerald-300"
+                          fallbackClassName="w-6 h-6 text-[#F45CAB]"
                         />
                       </div>
                       <div className="min-w-0">
-                        <p className="font-semibold text-slate-800 text-sm truncate">{item.name}</p>
-                        <p className="text-xs text-slate-500">
+                        <p className="font-semibold text-stone-900 text-sm truncate">{item.name}</p>
+                        <p className="text-xs text-stone-500 font-mono">
                           {formatPKR(item.price_in_paisa)} × {item.quantity}
                         </p>
                       </div>
                     </div>
-                    <span className="font-bold text-slate-800 text-sm whitespace-nowrap">
+                    <span className="font-bold text-[#E13288] text-sm whitespace-nowrap font-mono">
                       {formatPKR(lineTotal)}
                     </span>
                   </div>
@@ -195,36 +182,36 @@ export const CheckoutPage: React.FC = () => {
 
         {/* Right Column: Summary & Place Order */}
         <div className="lg:col-span-1">
-          <div className="bg-white border border-slate-200 rounded-3xl p-6 space-y-5 sticky top-24 shadow-sm">
-            <h2 className="font-black text-slate-900 text-base">Payment & Order Summary</h2>
+          <div className="bg-white border border-[#E9DCE4] rounded-3xl p-6 space-y-5 sticky top-24 shadow-xs">
+            <h2 className="font-black text-stone-900 text-base">Payment and Order Summary</h2>
 
             <div className="space-y-3 text-sm">
-              <div className="flex justify-between text-slate-600">
+              <div className="flex justify-between text-stone-600">
                 <span>Items Subtotal</span>
-                <span className="font-semibold text-slate-800">{formatPKR(subtotal)}</span>
+                <span className="font-semibold text-stone-900 font-mono">{formatPKR(subtotal)}</span>
               </div>
-              <div className="flex justify-between text-slate-600">
+              <div className="flex justify-between text-stone-600">
                 <span>Shipping</span>
-                <span className="text-emerald-600 font-semibold">Free Delivery</span>
+                <span className="text-emerald-700 font-semibold">Standard COD</span>
               </div>
-              <div className="flex justify-between text-slate-600">
+              <div className="flex justify-between text-stone-600">
                 <span>Payment Method</span>
-                <span className="text-slate-800 font-semibold">Cash on Delivery (COD)</span>
+                <span className="text-stone-900 font-semibold">Cash on Delivery (COD)</span>
               </div>
             </div>
 
-            <div className="border-t border-slate-100 pt-4 flex justify-between items-center">
+            <div className="border-t border-stone-100 pt-4 flex justify-between items-center">
               <div>
-                <span className="font-black text-slate-800 text-base block">Total Amount</span>
-                <span className="text-[11px] text-slate-400">Guaranteed server price</span>
+                <span className="font-black text-stone-900 text-base block">Total Amount</span>
+                <span className="text-[11px] text-stone-400">Guaranteed server price</span>
               </div>
-              <span className="text-2xl font-black text-emerald-950">{formatPKR(subtotal)}</span>
+              <span className="text-2xl font-black text-[#E13288] font-mono">{formatPKR(subtotal)}</span>
             </div>
 
             <button
               onClick={handlePlaceOrder}
               disabled={submitting}
-              className="w-full py-3.5 rounded-2xl bg-[#0b3b2c] hover:bg-emerald-800 text-white font-extrabold text-xs sm:text-sm disabled:opacity-60 disabled:cursor-not-allowed transition shadow-md flex items-center justify-center gap-2"
+              className="w-full py-3.5 rounded-full bg-[#028643] hover:bg-[#03081E] text-white font-extrabold text-xs sm:text-sm disabled:opacity-60 disabled:cursor-not-allowed transition shadow-md flex items-center justify-center gap-2 cursor-pointer"
             >
               {submitting ? (
                 <>
@@ -234,14 +221,21 @@ export const CheckoutPage: React.FC = () => {
               ) : (
                 <>
                   <CheckCircle2 className="w-4 h-4" />
-                  <span>Place Order</span>
+                  <span>Place Order (Cash on Delivery)</span>
                 </>
               )}
             </button>
 
-            <p className="text-[11px] text-slate-400 text-center leading-relaxed">
-              By placing this order, inventory stock will be locked and securely decremented in the database.
-            </p>
+            <div className="pt-2 border-t border-stone-100 text-[11px] text-stone-500 space-y-1.5">
+              <div className="flex items-center gap-2">
+                <Truck className="w-4 h-4 text-[#E13288] shrink-0" />
+                <span>Pay to courier rider upon package inspection</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-[#E13288] shrink-0" />
+                <span>Verified inventory reservation</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

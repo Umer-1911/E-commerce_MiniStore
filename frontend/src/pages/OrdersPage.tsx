@@ -30,12 +30,12 @@ export const OrdersPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-slate-200">
+      <div className="flex items-center justify-between pb-4 border-b border-[#E9DCE4]">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">My Orders</h1>
-          <p className="text-slate-500 text-sm mt-1">
+          <h1 className="text-2xl sm:text-3xl font-black text-stone-900 tracking-tight">Order History and Tracking</h1>
+          <p className="text-stone-500 text-sm mt-1">
             Track and review your previous purchases.
           </p>
         </div>
@@ -43,9 +43,9 @@ export const OrdersPage: React.FC = () => {
 
       {/* Loading state */}
       {loading && (
-        <div className="flex flex-col items-center justify-center py-20 space-y-3">
-          <RefreshCw className="w-8 h-8 animate-spin text-indigo-600" />
-          <p className="text-sm text-slate-500 font-medium">Loading your orders...</p>
+        <div className="flex flex-col items-center justify-center py-20 space-y-3" role="status">
+          <RefreshCw className="w-8 h-8 animate-spin text-[#F45CAB]" />
+          <p className="text-sm text-stone-500 font-medium">Loading your orders...</p>
         </div>
       )}
 
@@ -59,7 +59,7 @@ export const OrdersPage: React.FC = () => {
           </div>
           <button
             onClick={fetchOrders}
-            className="px-3 py-1 bg-white border border-rose-300 rounded-lg text-xs font-semibold text-rose-700 hover:bg-rose-100 transition"
+            className="text-xs font-semibold text-rose-800 hover:underline cursor-pointer"
           >
             Retry
           </button>
@@ -68,21 +68,23 @@ export const OrdersPage: React.FC = () => {
 
       {/* Empty state */}
       {!loading && !error && orders.length === 0 && (
-        <div className="bg-white p-16 rounded-2xl border border-slate-200 text-center space-y-4">
-          <div className="inline-flex p-5 bg-indigo-50 text-indigo-500 rounded-full">
-            <ShoppingBag className="w-10 h-10" />
+        <div className="bg-white rounded-3xl border border-[#E9DCE4] p-12 text-center space-y-4 shadow-xs">
+          <div className="w-16 h-16 rounded-full bg-[#FFF0F7] text-[#E13288] flex items-center justify-center mx-auto">
+            <Package className="w-8 h-8" />
           </div>
-          <h2 className="text-xl font-bold text-slate-800">No Orders Yet</h2>
-          <p className="text-slate-500 text-sm max-w-sm mx-auto">
-            You haven't placed any orders yet. Discover our quality products and place your first order today!
-          </p>
-          <div className="pt-2">
+          <div className="space-y-1">
+            <h2 className="text-xl font-bold text-stone-900">No orders placed yet</h2>
+            <p className="text-stone-500 text-sm max-w-sm mx-auto">
+              When you place an order with Cash on Delivery, it will appear here for live tracking.
+            </p>
+          </div>
+          <div>
             <Link
               to="/products"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition shadow-sm"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-[#F45CAB] hover:bg-[#03081E] text-white text-xs font-bold transition shadow-sm"
             >
               <ShoppingBag className="w-4 h-4" />
-              Browse Products
+              <span>Explore Products</span>
             </Link>
           </div>
         </div>
@@ -92,81 +94,90 @@ export const OrdersPage: React.FC = () => {
       {!loading && !error && orders.length > 0 && (
         <div className="space-y-4">
           {orders.map((order) => {
-            const formattedDate = order.created_at
+            const itemCount = order.order_items?.reduce((sum: number, item) => sum + item.quantity, 0) ?? 0;
+            const dateStr = order.created_at
               ? new Date(order.created_at).toLocaleDateString('en-PK', {
                   year: 'numeric',
                   month: 'short',
                   day: 'numeric',
                 })
-              : 'Unknown date';
-
-            const itemsCount = order.order_items?.reduce((acc, item) => acc + item.quantity, 0) ?? 0;
+              : 'Recently';
 
             return (
               <div
                 key={order.id}
-                className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:border-slate-300 transition"
+                className="bg-white border border-[#E9DCE4] rounded-2xl p-5 sm:p-6 shadow-xs hover:border-[#F45CAB]/50 transition space-y-4"
               >
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-100">
-                  <div className="flex items-center gap-4">
-                    <div>
-                      <span className="text-xs text-slate-400 font-medium">Order Number</span>
-                      <p className="text-base font-bold text-slate-900">#{order.id}</p>
-                    </div>
-                    <div className="h-8 w-px bg-slate-200 hidden sm:block" />
-                    <div>
-                      <span className="text-xs text-slate-400 font-medium">Date Placed</span>
-                      <p className="text-sm font-semibold text-slate-700">{formattedDate}</p>
-                    </div>
+                {/* Order Top Bar */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-stone-100">
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <span className="font-mono text-sm font-bold text-stone-900">
+                      Order #{order.id}
+                    </span>
+                    <span className="text-xs text-stone-400">•</span>
+                    <span className="text-xs text-stone-500">{dateStr}</span>
+                    <span className="text-xs text-stone-400">•</span>
+                    <span className="text-xs text-stone-500">
+                      {itemCount} {itemCount === 1 ? 'item' : 'items'}
+                    </span>
                   </div>
-
                   <div className="flex items-center gap-3">
-                    <OrderStatusBadge status={order.status} size="md" />
-                    <Link
-                      to={`/orders/${order.id}`}
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition"
-                    >
-                      <span>View Details</span>
-                      <ChevronRight className="w-3.5 h-3.5" />
-                    </Link>
+                    <OrderStatusBadge status={order.status} />
                   </div>
                 </div>
 
                 {/* Items preview */}
-                <div className="pt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  <div className="flex items-center gap-2 overflow-x-auto py-1">
-                    {order.order_items?.slice(0, 4).map((item) => {
-                      const img = resolveImageUrl(item.product?.image_path);
-                      return (
-                        <div
-                          key={item.id}
-                          className="w-12 h-12 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex-shrink-0 flex items-center justify-center"
-                          title={`${item.product?.name ?? 'Item'} (${item.quantity}x)`}
-                        >
-                          {img ? (
-                            <img src={img} alt={item.product?.name ?? 'Product'} className="w-full h-full object-cover" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  {order.order_items?.map((item) => {
+                    const imgUrl = item.product?.image_path
+                      ? resolveImageUrl(item.product.image_path)
+                      : null;
+
+                    return (
+                      <div
+                        key={item.id}
+                        className="flex items-center gap-3 p-2.5 rounded-xl bg-stone-50/70 border border-stone-100"
+                      >
+                        <div className="w-12 h-12 rounded-lg bg-white border border-stone-200 flex-shrink-0 overflow-hidden flex items-center justify-center">
+                          {imgUrl ? (
+                            <img
+                              src={imgUrl}
+                              alt={item.product?.name ?? 'Product'}
+                              className="w-full h-full object-cover"
+                            />
                           ) : (
-                            <Package className="w-5 h-5 text-slate-300" />
+                            <Package className="w-5 h-5 text-stone-300" />
                           )}
                         </div>
-                      );
-                    })}
-                    {(order.order_items?.length ?? 0) > 4 && (
-                      <span className="text-xs font-semibold text-slate-400 px-2">
-                        +{(order.order_items?.length ?? 0) - 4} more
-                      </span>
-                    )}
-                    <span className="text-xs text-slate-500 ml-2">
-                      {itemsCount} {itemsCount === 1 ? 'item' : 'items'} total
-                    </span>
-                  </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-bold text-stone-900 truncate">
+                            {item.product?.name ?? 'Product'}
+                          </p>
+                          <p className="text-[11px] text-stone-500 font-mono">
+                            Qty: {item.quantity} × {formatPKR(item.price_at_purchase_in_paisa)}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
 
-                  <div className="text-right">
-                    <span className="text-xs text-slate-400 block font-medium">Order Total</span>
-                    <span className="text-lg font-bold text-indigo-700">
+                {/* Bottom Bar: Total & Action Link */}
+                <div className="flex items-center justify-between pt-2 border-t border-stone-100">
+                  <div>
+                    <span className="text-xs text-stone-500 block">Total Amount (COD)</span>
+                    <span className="text-base font-black text-[#E13288] font-mono">
                       {formatPKR(order.total_amount_in_paisa)}
                     </span>
                   </div>
+
+                  <Link
+                    to={`/orders/${order.id}`}
+                    className="inline-flex items-center gap-1.5 px-4 py-2 rounded-full border border-stone-300 hover:border-[#03081E] hover:bg-[#03081E] hover:text-white text-xs font-bold text-stone-800 transition cursor-pointer shadow-xs"
+                  >
+                    <span>View Details and Timeline</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </Link>
                 </div>
               </div>
             );

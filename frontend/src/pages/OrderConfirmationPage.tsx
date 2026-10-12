@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, Link } from 'react-router-dom';
-import { CheckCircle, ShoppingBag, ArrowRight, Package, Calendar, Hash, Clock } from 'lucide-react';
+import { CheckCircle, ShoppingBag, ArrowRight, Package, Calendar, Hash } from 'lucide-react';
 import type { Order } from '../types';
 import { formatPKR, resolveImageUrl } from '../services/productService';
 
@@ -10,24 +10,24 @@ export const OrderConfirmationPage: React.FC = () => {
 
   if (!order) {
     return (
-      <div className="max-w-xl mx-auto my-12 p-8 bg-white rounded-2xl border border-slate-200 text-center space-y-4">
-        <div className="inline-flex p-3 bg-indigo-50 text-indigo-600 rounded-full">
+      <div className="max-w-xl mx-auto my-12 p-8 bg-white rounded-3xl border border-[#E9DCE4] text-center space-y-4 shadow-xs">
+        <div className="inline-flex p-3 bg-[#FFF0F7] text-[#E13288] rounded-full">
           <ShoppingBag className="w-8 h-8" />
         </div>
-        <h2 className="text-xl font-bold text-slate-800">Order Placed</h2>
-        <p className="text-slate-500 text-sm">
+        <h2 className="text-xl font-bold text-stone-900">Order Placed</h2>
+        <p className="text-stone-500 text-sm">
           Your order was submitted. To view current or past orders, visit My Orders.
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
           <Link
             to="/products"
-            className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 transition"
+            className="w-full sm:w-auto px-6 py-2.5 rounded-full bg-[#03081E] hover:bg-[#F45CAB] text-white text-xs font-bold transition"
           >
             Continue Shopping
           </Link>
           <Link
             to="/orders"
-            className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-slate-200 text-slate-700 text-sm font-semibold hover:bg-slate-50 transition"
+            className="w-full sm:w-auto px-6 py-2.5 rounded-full border border-stone-300 text-stone-700 text-xs font-bold hover:bg-stone-50 transition"
           >
             My Orders
           </Link>
@@ -51,88 +51,70 @@ export const OrderConfirmationPage: React.FC = () => {
       });
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
+    <div className="max-w-3xl mx-auto px-4 sm:px-6 py-8 space-y-6">
       {/* Success banner */}
-      <div className="bg-white border border-emerald-100 rounded-2xl p-8 text-center space-y-3 shadow-sm">
+      <div className="bg-white border border-[#E9DCE4] rounded-3xl p-8 text-center space-y-3 shadow-xs">
         <div className="inline-flex p-4 bg-emerald-50 text-emerald-600 rounded-full">
           <CheckCircle className="w-12 h-12" />
         </div>
-        <h1 className="text-2xl font-extrabold text-slate-900">Thank You for Your Order!</h1>
-        <p className="text-slate-600 text-sm max-w-md mx-auto">
-          Your order has been recorded in the database. Stock has been reserved and our team is preparing it.
+        <h1 className="text-2xl font-black text-stone-900">Thank You for Your Order!</h1>
+        <p className="text-stone-600 text-sm max-w-md mx-auto">
+          Your order has been placed successfully via Cash on Delivery. We have reserved your items and begun packaging.
         </p>
       </div>
 
-      {/* Order Meta Box */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pb-6 border-b border-slate-100">
-          {/* Order ID */}
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-slate-100 text-slate-600">
-              <Hash className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-400 font-medium">Order Number</p>
-              <p className="text-base font-bold text-slate-800">#{order.id}</p>
-            </div>
+      {/* Order Meta Card */}
+      <div className="bg-white border border-[#E9DCE4] rounded-2xl p-6 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-stone-100 gap-3">
+          <div className="flex items-center gap-2">
+            <Hash className="w-4 h-4 text-stone-400" />
+            <span className="text-xs text-stone-500 font-medium">Order Number:</span>
+            <span className="font-mono text-sm font-bold text-stone-900">#{order.id}</span>
           </div>
 
-          {/* Date */}
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-slate-100 text-slate-600">
-              <Calendar className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-400 font-medium">Order Date</p>
-              <p className="text-sm font-semibold text-slate-800">{formattedDate}</p>
-            </div>
-          </div>
-
-          {/* Status */}
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-amber-50 text-amber-600">
-              <Clock className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-400 font-medium">Status</p>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 capitalize">
-                {order.status}
-              </span>
-            </div>
+          <div className="flex items-center gap-2 text-xs text-stone-500">
+            <Calendar className="w-4 h-4 text-stone-400" />
+            <span>{formattedDate}</span>
           </div>
         </div>
 
-        {/* Order Items */}
-        <div className="space-y-4">
-          <h2 className="font-semibold text-slate-800 text-sm uppercase tracking-wider text-slate-500">
-            Items Ordered
+        {/* Items Summary */}
+        <div className="space-y-3">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-stone-400">
+            Ordered Items
           </h2>
 
-          <div className="divide-y divide-slate-100">
-            {order.order_items?.map(item => {
-              const imageUrl = resolveImageUrl(item.product?.image_path);
+          <div className="divide-y divide-stone-100">
+            {order.order_items?.map((item) => {
+              const imgUrl = item.product?.image_path
+                ? resolveImageUrl(item.product.image_path)
+                : null;
               const lineTotal = item.price_at_purchase_in_paisa * item.quantity;
 
               return (
                 <div key={item.id} className="py-3 flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-12 h-12 rounded-lg bg-slate-100 overflow-hidden flex-shrink-0 flex items-center justify-center">
-                      {imageUrl ? (
-                        <img src={imageUrl} alt={item.product?.name ?? 'Product'} className="w-full h-full object-cover" />
+                    <div className="w-12 h-12 rounded-lg bg-stone-50 border border-stone-200 flex-shrink-0 overflow-hidden flex items-center justify-center">
+                      {imgUrl ? (
+                        <img
+                          src={imgUrl}
+                          alt={item.product?.name ?? 'Product'}
+                          className="w-full h-full object-cover"
+                        />
                       ) : (
-                        <Package className="w-5 h-5 text-slate-300" />
+                        <Package className="w-5 h-5 text-stone-300" />
                       )}
                     </div>
                     <div className="min-w-0">
-                      <p className="font-semibold text-slate-800 text-sm truncate">
-                        {item.product?.name ?? `Product #${item.product_id}`}
+                      <p className="font-semibold text-stone-900 text-xs truncate">
+                        {item.product?.name ?? 'Product'}
                       </p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-[11px] text-stone-500 font-mono">
                         {formatPKR(item.price_at_purchase_in_paisa)} × {item.quantity}
                       </p>
                     </div>
                   </div>
-                  <span className="font-semibold text-slate-800 text-sm whitespace-nowrap">
+                  <span className="font-bold text-[#E13288] text-xs font-mono whitespace-nowrap">
                     {formatPKR(lineTotal)}
                   </span>
                 </div>
@@ -141,30 +123,39 @@ export const OrderConfirmationPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Total calculation snapshot */}
-        <div className="border-t border-slate-100 pt-4 flex justify-between items-center">
-          <span className="text-base font-bold text-slate-800">Total Paid (Cash on Delivery)</span>
-          <span className="text-2xl font-extrabold text-indigo-700">
-            {formatPKR(order.total_amount_in_paisa)}
-          </span>
+        {/* Total breakdown */}
+        <div className="pt-4 border-t border-stone-100 space-y-2 text-xs">
+          <div className="flex justify-between text-stone-600">
+            <span>Payment Method</span>
+            <span className="font-semibold text-stone-900">Cash on Delivery (COD)</span>
+          </div>
+          <div className="flex justify-between text-stone-600">
+            <span>Shipping</span>
+            <span className="font-semibold text-emerald-700">Free Standard Delivery</span>
+          </div>
+          <div className="flex justify-between items-center pt-2 border-t border-stone-100">
+            <span className="font-black text-stone-900 text-sm">Total Amount Due</span>
+            <span className="text-xl font-black text-[#E13288] font-mono">
+              {formatPKR(order.total_amount_in_paisa)}
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Navigation Links */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-2">
+      {/* Bottom Action buttons */}
+      <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
         <Link
-          to="/products"
-          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-indigo-600 text-white font-semibold text-sm hover:bg-indigo-700 transition shadow-sm"
+          to={`/orders/${order.id}`}
+          className="w-full sm:w-auto px-6 py-3 rounded-full bg-[#03081E] hover:bg-[#F45CAB] text-white text-xs font-bold transition flex items-center justify-center gap-2 shadow-xs"
         >
-          <ShoppingBag className="w-4 h-4" />
-          <span>Continue Shopping</span>
+          <span>Track Order Status</span>
+          <ArrowRight className="w-4 h-4" />
         </Link>
         <Link
-          to="/orders"
-          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl border border-slate-200 bg-white text-slate-700 font-semibold text-sm hover:bg-slate-50 transition"
+          to="/products"
+          className="w-full sm:w-auto px-6 py-3 rounded-full border border-stone-300 text-stone-700 text-xs font-bold hover:bg-stone-50 transition text-center"
         >
-          <span>My Orders</span>
-          <ArrowRight className="w-4 h-4 text-slate-400" />
+          Continue Shopping
         </Link>
       </div>
     </div>

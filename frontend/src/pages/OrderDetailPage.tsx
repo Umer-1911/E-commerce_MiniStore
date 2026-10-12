@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, RefreshCw, AlertCircle, Calendar, Hash, Package, ShoppingBag } from 'lucide-react';
+import { ArrowLeft, RefreshCw, AlertCircle, Calendar, Hash, Package } from 'lucide-react';
 import { orderService } from '../services/orderService';
 import { formatPKR, resolveImageUrl } from '../services/productService';
 import { OrderStatusBadge } from '../components/OrderStatusBadge';
@@ -45,35 +45,35 @@ export const OrderDetailPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 space-y-3">
-        <RefreshCw className="w-8 h-8 animate-spin text-indigo-600" />
-        <p className="text-sm text-slate-500 font-medium">Loading order #{id}...</p>
+      <div className="flex flex-col items-center justify-center py-20 space-y-3" role="status">
+        <RefreshCw className="w-8 h-8 animate-spin text-[#F45CAB]" />
+        <p className="text-sm text-stone-500 font-medium">Loading order #{id}...</p>
       </div>
     );
   }
 
   if (error || !order) {
     return (
-      <div className="max-w-xl mx-auto my-12 p-8 bg-white rounded-2xl border border-slate-200 text-center space-y-4">
+      <div className="max-w-xl mx-auto my-12 p-8 bg-white rounded-3xl border border-[#E9DCE4] text-center space-y-4 shadow-xs">
         <div className="inline-flex p-3 bg-rose-50 text-rose-500 rounded-full">
           <AlertCircle className="w-8 h-8" />
         </div>
-        <h2 className="text-xl font-bold text-slate-800">Order Not Found</h2>
-        <p className="text-slate-500 text-sm">{error ?? 'Unable to find the requested order.'}</p>
+        <h2 className="text-xl font-bold text-stone-900">Unable to load order</h2>
+        <p className="text-stone-600 text-sm">{error}</p>
         <div className="pt-2">
           <Link
             to="/orders"
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold bg-indigo-600 text-white hover:bg-indigo-700 transition"
+            className="inline-flex items-center gap-2 px-6 py-2.5 bg-[#03081E] text-white rounded-full text-xs font-bold hover:bg-[#F45CAB] transition"
           >
             <ArrowLeft className="w-4 h-4" />
-            Back to My Orders
+            <span>Back to My Orders</span>
           </Link>
         </div>
       </div>
     );
   }
 
-  const formattedDate = order.created_at
+  const dateStr = order.created_at
     ? new Date(order.created_at).toLocaleDateString('en-PK', {
         year: 'numeric',
         month: 'long',
@@ -81,123 +81,146 @@ export const OrderDetailPage: React.FC = () => {
         hour: '2-digit',
         minute: '2-digit',
       })
-    : 'Unknown date';
+    : 'Recently';
+
+  const itemCount = order.order_items?.reduce((sum: number, item) => sum + item.quantity, 0) ?? 0;
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      {/* Breadcrumb / Back button */}
-      <div className="flex items-center justify-between pb-4 border-b border-slate-200">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      {/* Top Breadcrumb / Back Navigation */}
+      <div className="flex items-center justify-between pb-4 border-b border-[#E9DCE4]">
         <Link
           to="/orders"
-          className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-600 hover:text-indigo-600 transition"
+          className="inline-flex items-center gap-2 text-xs font-bold text-stone-700 hover:text-[#E13288] transition"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Back to My Orders</span>
+          <span>Back to All Orders</span>
         </Link>
-        <OrderStatusBadge status={order.status} size="md" />
+        <OrderStatusBadge status={order.status} />
       </div>
 
-      {/* Timeline Card */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-3">
-        <h3 className="font-semibold text-slate-800 text-sm uppercase tracking-wider text-slate-500">
-          Order Status
-        </h3>
-        <OrderStatusTimeline status={order.status} />
-      </div>
-
-      {/* Meta Box */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pb-6 border-b border-slate-100">
-          {/* Order ID */}
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-slate-100 text-slate-600">
-              <Hash className="w-5 h-5" />
+      {/* Main Order Header Card */}
+      <div className="bg-white border border-[#E9DCE4] rounded-2xl p-6 sm:p-8 space-y-6 shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-stone-100">
+          <div>
+            <div className="flex items-center gap-2 text-xs text-stone-500 mb-1">
+              <Hash className="w-3.5 h-3.5" />
+              <span>Order Reference</span>
             </div>
-            <div>
-              <p className="text-xs text-slate-400 font-medium">Order Number</p>
-              <p className="text-base font-bold text-slate-800">#{order.id}</p>
+            <h1 className="text-2xl font-black text-stone-900 font-mono">
+              Order #{order.id}
+            </h1>
+          </div>
+
+          <div className="flex flex-col sm:items-end text-xs text-stone-500">
+            <div className="flex items-center gap-1.5 font-medium">
+              <Calendar className="w-3.5 h-3.5" />
+              <span>Placed on {dateStr}</span>
             </div>
-          </div>
-
-          {/* Date */}
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-slate-100 text-slate-600">
-              <Calendar className="w-5 h-5" />
-            </div>
-            <div>
-              <p className="text-xs text-slate-400 font-medium">Order Placed On</p>
-              <p className="text-sm font-semibold text-slate-800">{formattedDate}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Ordered Items */}
-        <div className="space-y-4">
-          <h2 className="font-semibold text-slate-800 text-sm uppercase tracking-wider text-slate-500">
-            Order Items
-          </h2>
-
-          <div className="divide-y divide-slate-100">
-            {order.order_items?.map((item) => {
-              const imageUrl = resolveImageUrl(item.product?.image_path);
-              const lineTotal = item.price_at_purchase_in_paisa * item.quantity;
-
-              return (
-                <div key={item.id} className="py-3.5 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-14 h-14 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden flex-shrink-0 flex items-center justify-center">
-                      {imageUrl ? (
-                        <img src={imageUrl} alt={item.product?.name ?? 'Product'} className="w-full h-full object-cover" />
-                      ) : (
-                        <Package className="w-6 h-6 text-slate-300" />
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-slate-800 text-sm truncate">
-                        {item.product?.name ?? `Product #${item.product_id}`}
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        {formatPKR(item.price_at_purchase_in_paisa)} × {item.quantity}
-                      </p>
-                    </div>
-                  </div>
-                  <span className="font-bold text-slate-800 text-sm whitespace-nowrap">
-                    {formatPKR(lineTotal)}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Summary Breakdown */}
-        <div className="border-t border-slate-100 pt-4 space-y-2 text-sm">
-          <div className="flex justify-between text-slate-600">
-            <span>Payment Method</span>
-            <span className="font-medium text-slate-800">Cash on Delivery</span>
-          </div>
-          <div className="flex justify-between text-slate-600">
-            <span>Shipping</span>
-            <span className="text-emerald-600 font-medium">Free Delivery</span>
-          </div>
-          <div className="border-t border-slate-100 pt-3 flex justify-between items-center text-base">
-            <span className="font-bold text-slate-900">Total Amount</span>
-            <span className="text-2xl font-extrabold text-indigo-700">
-              {formatPKR(order.total_amount_in_paisa)}
+            <span className="text-[11px] text-stone-400 mt-0.5">
+              Cash on Delivery (COD) Nationwide
             </span>
           </div>
         </div>
+
+        {/* Status Timeline */}
+        <div className="space-y-3">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-stone-400">
+            Fulfillment Progress
+          </h2>
+          <OrderStatusTimeline status={order.status} />
+        </div>
       </div>
 
-      {/* Action buttons */}
-      <div className="flex items-center justify-between pt-2">
-        <Link
-          to="/products"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-700 text-sm font-semibold hover:bg-slate-50 transition"
-        >
-          <ShoppingBag className="w-4 h-4" />
-          <span>Continue Shopping</span>
-        </Link>
+      {/* Items & Payment Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left: Items list */}
+        <div className="lg:col-span-2 space-y-4">
+          <div className="bg-white border border-[#E9DCE4] rounded-2xl p-6 shadow-xs space-y-4">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-stone-500 flex items-center justify-between">
+              <span>Ordered Items ({itemCount})</span>
+            </h2>
+
+            <div className="divide-y divide-stone-100">
+              {order.order_items?.map((item) => {
+                const imgUrl = item.product?.image_path
+                  ? resolveImageUrl(item.product.image_path)
+                  : null;
+                const lineTotal = item.price_at_purchase_in_paisa * item.quantity;
+
+                return (
+                  <div key={item.id} className="py-4 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-4 min-w-0">
+                      <div className="w-16 h-16 rounded-xl bg-stone-50 border border-stone-200 flex-shrink-0 overflow-hidden flex items-center justify-center">
+                        {imgUrl ? (
+                          <img
+                            src={imgUrl}
+                            alt={item.product?.name ?? 'Product'}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <Package className="w-6 h-6 text-stone-300" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <Link
+                          to={item.product_id ? `/products/${item.product_id}` : '#'}
+                          className="font-bold text-stone-900 text-sm hover:text-[#E13288] transition truncate block"
+                        >
+                          {item.product?.name ?? 'Product item'}
+                        </Link>
+                        {item.product?.category && (
+                          <span className="text-[11px] text-[#A93870] font-semibold">
+                            {item.product.category}
+                          </span>
+                        )}
+                        <p className="text-xs text-stone-500 font-mono mt-0.5">
+                          {formatPKR(item.price_at_purchase_in_paisa)} × {item.quantity}
+                        </p>
+                      </div>
+                    </div>
+
+                    <span className="font-black text-[#E13288] text-sm whitespace-nowrap font-mono">
+                      {formatPKR(lineTotal)}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Right: Payment breakdown */}
+        <div className="lg:col-span-1 space-y-4">
+          <div className="bg-white border border-[#E9DCE4] rounded-2xl p-6 shadow-xs space-y-4">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-stone-500">
+              Payment Summary
+            </h2>
+
+            <div className="space-y-3 text-xs text-stone-600 divide-y divide-stone-100">
+              <div className="flex justify-between pb-2">
+                <span>Items Subtotal</span>
+                <span className="font-semibold text-stone-900 font-mono">
+                  {formatPKR(order.total_amount_in_paisa)}
+                </span>
+              </div>
+              <div className="flex justify-between py-2">
+                <span>Shipping Fee</span>
+                <span className="font-semibold text-emerald-700">Free Standard COD</span>
+              </div>
+              <div className="flex justify-between py-2">
+                <span>Payment Method</span>
+                <span className="font-semibold text-stone-900">Cash on Delivery</span>
+              </div>
+              <div className="flex justify-between pt-3 text-sm font-black text-stone-900">
+                <span>Total Amount Due</span>
+                <span className="text-lg text-[#E13288] font-mono">
+                  {formatPKR(order.total_amount_in_paisa)}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

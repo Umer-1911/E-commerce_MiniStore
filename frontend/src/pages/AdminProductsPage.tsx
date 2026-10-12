@@ -1,13 +1,32 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Loader2, Package, Pencil, Plus, Trash2, X, Upload, AlertCircle } from 'lucide-react';
+import { Loader2, Package, Pencil, Plus, Trash2, X, Upload, AlertCircle, Search, SlidersHorizontal, Check } from 'lucide-react';
 import { useProductStore } from '../store/useProductStore';
 import { formatPKR, resolveImageUrl } from '../services/productService';
 import { ProductImage } from '../components/ProductImage';
+import { AdminLayout } from '../layouts/AdminLayout';
 import type { Product, ProductFormPayload } from '../types';
 
-// ── helpers ──────────────────────────────────────────────────────────────────
+// ── Constants ──────────────────────────────────────────────────────────────────
 
-const CATEGORIES = ['Clothing', 'Food & Groceries', 'Home Decor', 'Footwear', 'Handicrafts'];
+const CATEGORIES = ['Clothing', 'Food & Groceries', 'Home Decor', 'Footwear', 'Handicrafts', 'Snacks'];
+
+const IMAGE_PRESETS = [
+  { label: 'Peshawari Chappal', path: '/images/peshawari_chappal_1790952083619.jpg' },
+  { label: 'Embroidered Kurti', path: '/images/embroidered_kurti_1790952127717.jpg' },
+  { label: 'Multani Ceramic Pottery', path: '/images/multani_pottery_vase_1790952099954.jpg' },
+  { label: 'Hunza Dry Fruits', path: '/images/hunza_dry_fruits_1790952113079.jpg' },
+  { label: 'Artisan Composition', path: '/images/hero_pakistani_crafts_1790952064704.jpg' },
+];
+
+const ORIGIN_MAP: Record<string, string> = {
+  'Handcrafted Peshawari Chappal': 'Namak Mandi, Peshawar',
+  'Embroidered Cotton Kurti': 'Anarkali, Lahore',
+  'Hunza Organic Dry Fruits Assortment': 'Karimabad, Hunza Valley',
+  "Lay's Classic Salted Potato Chips (50g)": 'gulshan super store, lahore',
+  'Multani Ceramic Blue Pottery Vase': 'Kashigari Guild, Multan',
+  'Super Kernel Basmati Rice (5kg Vintage Crop)': 'chenab basin, gujranwala',
+  'Pure Organic Beri Honey': 'Wild Jujube Forests, Potohar',
+};
 
 const EMPTY_FORM: ProductFormPayload = {
   name: '',
@@ -18,7 +37,7 @@ const EMPTY_FORM: ProductFormPayload = {
   image: null,
 };
 
-// ── ProductForm component ─────────────────────────────────────────────────────
+// ── ProductForm (Add / Edit modal body) ────────────────────────────────────────
 
 interface ProductFormProps {
   initial?: Partial<ProductFormPayload> & { image_path?: string | null };
@@ -27,26 +46,27 @@ interface ProductFormProps {
   submitLabel: string;
   busy: boolean;
   serverError: string | null;
+  isEdit?: boolean;
 }
 
-const ProductForm: React.FC<ProductFormProps> = ({ initial, onSubmit, onCancel, submitLabel, busy, serverError }) => {
+const ProductForm: React.FC<ProductFormProps> = ({
+  initial, onSubmit, onCancel, submitLabel, busy, serverError, isEdit,
+}) => {
   const [form, setForm] = useState<ProductFormPayload>({
-    ...EMPTY_FORM,
-    ...initial,
-    image: null,
+    ...EMPTY_FORM, ...initial, image: null,
   });
   const [pkrDisplay, setPkrDisplay] = useState(
     initial?.price_in_paisa ? String(initial.price_in_paisa / 100) : ''
   );
-  const [preview, setPreview]     = useState<string | null>(resolveImageUrl(initial?.image_path));
-  const fileRef                   = useRef<HTMLInputElement>(null);
-  const [errors, setErrors]       = useState<Partial<Record<keyof ProductFormPayload, string>>>({});
+  const [preview, setPreview] = useState<string | null>(resolveImageUrl(initial?.image_path));
+  const fileRef               = useRef<HTMLInputElement>(null);
+  const [errors, setErrors]   = useState<Partial<Record<keyof ProductFormPayload, string>>>({});
 
   const validate = (): boolean => {
     const e: typeof errors = {};
-    if (!form.name.trim()) e.name = 'Name is required.';
-    if (form.price_in_paisa < 0 || isNaN(form.price_in_paisa)) e.price_in_paisa = 'Price must be ≥ 0.';
-    if (form.stock_quantity < 0 || isNaN(form.stock_quantity)) e.stock_quantity = 'Stock must be ≥ 0.';
+    if (!form.name.trim()) e.name = 'Product title is required.';
+    if (form.price_in_paisa < 0 || isNaN(form.price_in_paisa)) e.price_in_paisa = 'Price must be 0 or more.';
+    if (form.stock_quantity < 0 || isNaN(form.stock_quantity)) e.stock_quantity = 'Stock must be 0 or more.';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -78,93 +98,150 @@ const ProductForm: React.FC<ProductFormProps> = ({ initial, onSubmit, onCancel, 
         </div>
       )}
 
-      {/* Name */}
+      {/* Product Title */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Name *</label>
+        <label className="block text-sm font-semibold text-stone-700 mb-1">Product Title *</label>
         <input
           type="text"
           value={form.name}
           onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-          className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          placeholder="Product name"
+          className="w-full border border-stone-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#F45CAB]/40 focus:border-[#F45CAB] placeholder:text-stone-400"
+          placeholder="e.g. Handcrafted Khussa Footwear"
         />
         {errors.name && <p className="text-xs text-red-500 mt-1">{errors.name}</p>}
       </div>
 
-      {/* Category */}
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Category</label>
-        <select
-          value={form.category ?? ''}
-          onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
-          className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-        >
-          <option value="">— None —</option>
-          {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-        </select>
+      {/* Category + Origin (2 cols) */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-sm font-semibold text-stone-700 mb-1">Department / Category *</label>
+          <select
+            value={form.category ?? ''}
+            onChange={e => setForm(f => ({ ...f, category: e.target.value }))}
+            className="w-full border border-stone-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#F45CAB]/40 focus:border-[#F45CAB] bg-white"
+          >
+            <option value="">Select category</option>
+            {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-stone-700 mb-1">Regional Origin *</label>
+          <input
+            type="text"
+            value={(form as ProductFormPayload & { origin?: string }).origin ?? ''}
+            onChange={() => {/* origin not in schema — visual only */}}
+            className="w-full border border-stone-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#F45CAB]/40 focus:border-[#F45CAB] placeholder:text-stone-400"
+            placeholder="Peshawar, Khyber Pakhtunkhwa"
+          />
+        </div>
       </div>
 
-      {/* Price */}
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Price (PKR) *</label>
-        <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">PKR</span>
+      {/* Price + Stock (2 cols) */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-sm font-semibold text-stone-700 mb-1">Price in PKR *</label>
           <input
             type="number"
             value={pkrDisplay}
             onChange={e => handlePriceChange(e.target.value)}
             min={0}
             step={1}
-            className="w-full border border-slate-300 rounded-lg pl-12 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            placeholder="0"
+            className="w-full border border-stone-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#F45CAB]/40 focus:border-[#F45CAB]"
+            placeholder="3500"
           />
+          {errors.price_in_paisa && <p className="text-xs text-red-500 mt-1">{errors.price_in_paisa}</p>}
         </div>
-        <p className="text-xs text-slate-400 mt-1">Stored as {form.price_in_paisa} paisa</p>
-        {errors.price_in_paisa && <p className="text-xs text-red-500 mt-1">{errors.price_in_paisa}</p>}
+        <div>
+          <label className="block text-sm font-semibold text-stone-700 mb-1">Inventory Stock Quantity *</label>
+          <input
+            type="number"
+            value={form.stock_quantity}
+            onChange={e => setForm(f => ({ ...f, stock_quantity: Number(e.target.value) }))}
+            min={0}
+            className="w-full border border-stone-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#F45CAB]/40 focus:border-[#F45CAB]"
+            placeholder="15"
+          />
+          {errors.stock_quantity && <p className="text-xs text-red-500 mt-1">{errors.stock_quantity}</p>}
+        </div>
       </div>
 
-      {/* Stock */}
+      {/* Short Summary */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Stock Quantity *</label>
+        <label className="block text-sm font-semibold text-stone-700 mb-1">Short Summary</label>
         <input
-          type="number"
-          value={form.stock_quantity}
-          onChange={e => setForm(f => ({ ...f, stock_quantity: Number(e.target.value) }))}
-          min={0}
-          className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+          type="text"
+          value={''}
+          onChange={() => {/* not in schema */}}
+          className="w-full border border-stone-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#F45CAB]/40 focus:border-[#F45CAB] placeholder:text-stone-400"
+          placeholder="One-line summary for product cards..."
         />
-        {errors.stock_quantity && <p className="text-xs text-red-500 mt-1">{errors.stock_quantity}</p>}
       </div>
 
-      {/* Description */}
+      {/* Detailed Description */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Description</label>
+        <label className="block text-sm font-semibold text-stone-700 mb-1">Detailed Craftsmanship Description *</label>
         <textarea
           value={form.description ?? ''}
           onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-          rows={3}
-          className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
-          placeholder="Product description (optional)"
+          rows={4}
+          className="w-full border border-stone-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#F45CAB]/40 focus:border-[#F45CAB] resize-none placeholder:text-stone-400"
+          placeholder="Details about materials, artisan technique, and provenance..."
         />
       </div>
 
-      {/* Image */}
+      {/* Image Upload */}
       <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">Product Image</label>
-        <div
-          className="border-2 border-dashed border-slate-300 rounded-xl p-4 flex flex-col items-center gap-3 cursor-pointer hover:border-indigo-400 transition"
-          onClick={() => fileRef.current?.click()}
-        >
-          {preview ? (
-            <img src={preview} alt="Preview" className="w-32 h-32 object-cover rounded-lg" />
-          ) : (
-            <div className="w-16 h-16 flex items-center justify-center bg-slate-100 rounded-full">
-              <Upload className="w-6 h-6 text-slate-400" />
+        <label className="block text-sm font-semibold text-stone-700 mb-2">Product Image Preview & Presets</label>
+        <div className="flex gap-4 items-start">
+          {/* Thumbnail */}
+          <div
+            className="w-20 h-20 rounded-lg border-2 border-dashed border-stone-300 flex items-center justify-center overflow-hidden shrink-0 cursor-pointer hover:border-[#F45CAB] transition"
+            onClick={() => fileRef.current?.click()}
+          >
+            {preview ? (
+              <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+            ) : (
+              <Upload className="w-6 h-6 text-stone-400" />
+            )}
+          </div>
+
+          {/* Path input & Presets */}
+          <div className="flex-1 space-y-2.5">
+            <div>
+              <label className="block text-xs text-stone-600 font-bold mb-1">Image Asset Path</label>
+              <input
+                type="text"
+                readOnly
+                value={form.image ? form.image.name : (preview ?? '/src/assets/images/peshawari_chappal_1790952083619.jpg')}
+                className="w-full border border-stone-300 rounded-lg px-3 py-2 text-xs text-stone-600 bg-white focus:outline-none cursor-pointer"
+                onClick={() => fileRef.current?.click()}
+              />
             </div>
-          )}
-          <p className="text-xs text-slate-500 text-center">
-            {preview ? 'Click to replace image' : 'Click to upload (JPEG, PNG, WebP — max 2 MB)'}
-          </p>
+
+            {/* Quick Select Buttons */}
+            <div>
+              <p className="text-[11px] text-stone-400 font-medium mb-1.5">Quick Select:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {IMAGE_PRESETS.map((preset, idx) => {
+                  const isSelected = preview === preset.path || (!preview && idx === 0);
+                  return (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => setPreview(preset.path)}
+                      className={`px-3 py-1 rounded-lg text-xs font-semibold transition cursor-pointer ${
+                        isSelected
+                          ? 'bg-[#0f382c] text-white shadow-xs'
+                          : 'bg-white border border-stone-200 text-stone-700 hover:bg-stone-50'
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         </div>
         <input
           ref={fileRef}
@@ -176,37 +253,45 @@ const ProductForm: React.FC<ProductFormProps> = ({ initial, onSubmit, onCancel, 
       </div>
 
       {/* Actions */}
-      <div className="flex gap-3 pt-2">
+      <div className="flex justify-end gap-3 pt-3 border-t border-stone-100">
         <button
           type="button"
           onClick={onCancel}
-          className="flex-1 py-2 rounded-lg border border-slate-300 text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
+          className="px-6 py-2.5 rounded-xl border border-stone-300 text-sm font-semibold text-stone-700 hover:bg-stone-50 transition cursor-pointer"
         >
           Cancel
         </button>
         <button
           type="submit"
           disabled={busy}
-          className="flex-1 py-2 rounded-lg bg-[#0b3b2c] text-white text-sm font-bold hover:bg-emerald-800 disabled:opacity-60 disabled:cursor-not-allowed transition flex items-center justify-center gap-2 shadow-xs"
+          className="px-6 py-2.5 rounded-xl bg-[#F45CAB] hover:bg-[#E13288] text-white text-sm font-bold disabled:opacity-60 disabled:cursor-not-allowed transition flex items-center justify-center gap-1.5 shadow-sm cursor-pointer"
         >
-          {busy && <Loader2 className="w-4 h-4 animate-spin" />}
-          {submitLabel}
+          {busy ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Check className="w-4 h-4" />
+          )}
+          <span>{submitLabel || (isEdit ? 'Save Changes' : 'Create Product')}</span>
         </button>
       </div>
     </form>
   );
 };
 
-// ── Modal ─────────────────────────────────────────────────────────────────────
+// ── Product modal overlay ──────────────────────────────────────────────────────
 
-interface ModalProps { title: string; onClose: () => void; children: React.ReactNode }
-const Modal: React.FC<ModalProps> = ({ title, onClose, children }) => (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-    <div className="bg-white w-full max-w-lg rounded-2xl shadow-xl max-h-[90vh] overflow-y-auto">
-      <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
-        <h2 className="font-bold text-slate-900">{title}</h2>
-        <button onClick={onClose} className="p-1 rounded-lg hover:bg-slate-100 transition">
-          <X className="w-5 h-5 text-slate-500" />
+interface ProductModalProps { title: string; onClose: () => void; children: React.ReactNode }
+const ProductModal: React.FC<ProductModalProps> = ({ title, onClose, children }) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-8 overflow-y-auto">
+    <div className="bg-white w-full max-w-lg rounded-2xl shadow-2xl my-auto">
+      <div className="flex items-center justify-between px-6 py-4 border-b border-stone-200">
+        <h2 className="font-bold text-stone-900 text-base">{title}</h2>
+        <button
+          type="button"
+          onClick={onClose}
+          className="p-1.5 rounded-lg hover:bg-stone-100 transition text-stone-400 hover:text-stone-700"
+        >
+          <X className="w-5 h-5" />
         </button>
       </div>
       <div className="px-6 py-5">{children}</div>
@@ -214,7 +299,7 @@ const Modal: React.FC<ModalProps> = ({ title, onClose, children }) => (
   </div>
 );
 
-// ── Main AdminProductsPage ─────────────────────────────────────────────────────
+// ── Main Page ─────────────────────────────────────────────────────────────────
 
 export const AdminProductsPage: React.FC = () => {
   const {
@@ -223,39 +308,40 @@ export const AdminProductsPage: React.FC = () => {
     createProduct, updateProduct, deleteProduct,
   } = useProductStore();
 
-  const [showCreate, setShowCreate]   = useState(false);
-  const [editProduct, setEditProduct] = useState<Product | null>(null);
+  const [showCreate, setShowCreate]     = useState(false);
+  const [editProduct, setEditProduct]   = useState<Product | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [page, setPage]               = useState(1);
+  const [deleteError, setDeleteError]   = useState<string | null>(null);
+  const [page, setPage]                 = useState(1);
+  const [search, setSearch]             = useState('');
+  const [filterCat, setFilterCat]       = useState('');
 
   const load = useCallback(() => {
-    fetchCatalog({ per_page: 20, page, sort_by: 'created_at', sort_dir: 'desc' });
-  }, [fetchCatalog, page]);
+    fetchCatalog({
+      per_page: 20, page,
+      sort_by: 'created_at', sort_dir: 'desc',
+      search: search || undefined,
+      category: filterCat || undefined,
+    });
+  }, [fetchCatalog, page, search, filterCat]);
 
   useEffect(() => { load(); }, [load]);
 
   const handleCreate = async (payload: ProductFormPayload) => {
     try {
       await createProduct(payload);
-      // Only close the modal if the create actually succeeded
       setShowCreate(false);
       load();
-    } catch {
-      // Error is already stored in mutateError via the store; keep modal open
-    }
+    } catch { /* mutateError handled in store */ }
   };
 
   const handleUpdate = async (payload: ProductFormPayload) => {
     if (!editProduct) return;
     try {
       await updateProduct(editProduct.id, payload);
-      // Only close the modal if the update actually succeeded
       setEditProduct(null);
       load();
-    } catch {
-      // Error is already stored in mutateError via the store; keep modal open
-    }
+    } catch { /* mutateError handled in store */ }
   };
 
   const handleDelete = async () => {
@@ -264,127 +350,181 @@ export const AdminProductsPage: React.FC = () => {
     try {
       await deleteProduct(deleteTarget.id);
       setDeleteTarget(null);
-      load();
+      const remaining = (catalog?.data.length ?? 1) - 1;
+      if (remaining <= 0 && page > 1) setPage(p => p - 1);
+      else load();
     } catch (err) {
       const msg = err && typeof err === 'object' && 'response' in err
-        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message ?? 'Could not delete product.'
-        : 'Could not delete product.';
+        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message ?? 'Could not delete.'
+        : 'Could not delete.';
       setDeleteError(msg);
     }
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between pb-4 border-b border-slate-200">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900">Admin — Product Management</h1>
-          <p className="text-slate-500 text-sm mt-1">
-            {catalog ? `${catalog.total} products in catalog` : 'Manage the product catalog.'}
-          </p>
+    <AdminLayout>
+      {/* ── Toolbar ── */}
+      <div className="bg-white rounded-2xl border border-stone-200 shadow-xs p-4 flex flex-col sm:flex-row gap-3 items-center">
+        {/* Search */}
+        <div className="relative flex-1 min-w-0">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-stone-400" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => { setSearch(e.target.value); setPage(1); }}
+            placeholder="Search catalog by title, origin..."
+            className="w-full pl-9 pr-3 py-2 text-sm border border-stone-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-[#F45CAB]/30 focus:border-[#F45CAB]"
+          />
         </div>
+
+        {/* Category filter */}
+        <div className="flex items-center gap-2 shrink-0">
+          <SlidersHorizontal className="w-3.5 h-3.5 text-stone-400" />
+          <select
+            value={filterCat}
+            onChange={e => { setFilterCat(e.target.value); setPage(1); }}
+            className="border border-stone-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#F45CAB]/30 focus:border-[#F45CAB] bg-white"
+          >
+            <option value="">All Departments</option>
+            {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        </div>
+
+        {/* Add button */}
         <button
+          type="button"
           onClick={() => { clearMutateError(); setShowCreate(true); }}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 transition"
+          className="shrink-0 flex items-center gap-2 px-5 py-2 bg-[#F45CAB] hover:bg-[#E13288] text-white rounded-full text-xs font-bold transition shadow-sm cursor-pointer whitespace-nowrap"
         >
           <Plus className="w-4 h-4" />
-          New Product
+          Add Product Line
         </button>
       </div>
 
-      {/* Loading */}
+      {/* ── Loading ── */}
       {catalogLoading && (
-        <div className="flex justify-center py-16">
-          <Loader2 className="w-8 h-8 animate-spin text-indigo-500" />
+        <div className="flex justify-center py-16" role="status">
+          <Loader2 className="w-8 h-8 animate-spin text-[#F45CAB]" />
         </div>
       )}
 
-      {/* Table */}
+      {/* ── Products Table ── */}
       {!catalogLoading && catalog && (
-        <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+        <div className="bg-white border border-stone-200 rounded-2xl overflow-hidden shadow-xs">
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
-              <thead className="bg-slate-50 border-b border-slate-200">
-                <tr>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-600 w-16">Image</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-600">Name</th>
-                  <th className="px-4 py-3 text-left font-semibold text-slate-600">Category</th>
-                  <th className="px-4 py-3 text-right font-semibold text-slate-600">Price</th>
-                  <th className="px-4 py-3 text-right font-semibold text-slate-600">Stock</th>
-                  <th className="px-4 py-3 text-center font-semibold text-slate-600 w-24">Actions</th>
+              <thead className="border-b border-stone-100">
+                <tr className="text-[10px] uppercase tracking-wider text-stone-400 font-bold">
+                  <th className="px-5 py-3.5 text-left">Item</th>
+                  <th className="px-5 py-3.5 text-left">Category</th>
+                  <th className="px-5 py-3.5 text-left">Origin</th>
+                  <th className="px-5 py-3.5 text-left">Price (PKR)</th>
+                  <th className="px-5 py-3.5 text-left">Stock</th>
+                  <th className="px-5 py-3.5 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-stone-50">
                 {catalog.data.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-4 py-12 text-center text-slate-400">
-                      <Package className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      No products yet. Create one above.
+                    <td colSpan={6} className="px-5 py-16 text-center text-stone-400">
+                      <Package className="w-8 h-8 mx-auto mb-2 opacity-40" />
+                      <p className="text-sm">No products match your filters.</p>
                     </td>
                   </tr>
                 )}
-                {catalog.data.map(p => {
-                  return (
-                    <tr key={p.id} className="hover:bg-slate-50 transition">
-                      <td className="px-4 py-3">
-                        <div className="w-11 h-11 rounded-lg overflow-hidden border border-slate-100 bg-slate-50">
+                {catalog.data.map(p => (
+                  <tr key={p.id} className="hover:bg-stone-50/60 transition">
+                    {/* Item: thumbnail + name + description */}
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-10 h-10 rounded-lg overflow-hidden border border-stone-100 bg-stone-50 shrink-0">
                           <ProductImage
                             imagePath={p.image_path}
                             alt={p.name}
                             className="w-full h-full object-cover"
-                            fallbackClassName="w-4 h-4 text-emerald-300"
+                            fallbackClassName="w-4 h-4 text-stone-300"
                           />
                         </div>
-                      </td>
-                      <td className="px-4 py-3 font-medium text-slate-800 max-w-[200px] truncate">{p.name}</td>
-                      <td className="px-4 py-3 text-slate-500">{p.category ?? '—'}</td>
-                      <td className="px-4 py-3 text-right font-semibold text-indigo-700">{formatPKR(p.price_in_paisa)}</td>
-                      <td className="px-4 py-3 text-right">
-                        <span className={p.stock_quantity === 0 ? 'text-red-500' : 'text-slate-700'}>
-                          {p.stock_quantity}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-center gap-2">
-                          <button
-                            onClick={() => { clearMutateError(); setEditProduct(p); }}
-                            className="p-1.5 rounded-lg hover:bg-indigo-50 text-indigo-600 transition"
-                            title="Edit"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => { setDeleteError(null); setDeleteTarget(p); }}
-                            className="p-1.5 rounded-lg hover:bg-red-50 text-red-500 transition"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                        <div className="min-w-0">
+                          <p className="font-bold text-stone-900 text-[13px] truncate max-w-[200px]">{p.name}</p>
+                          <p className="text-xs text-stone-400 truncate max-w-[200px]">
+                            {p.description ? p.description.slice(0, 50) + (p.description.length > 50 ? '...' : '') : 'No description'}
+                          </p>
                         </div>
-                      </td>
-                    </tr>
-                  );
-                })}
+                      </div>
+                    </td>
+
+                    {/* Category */}
+                    <td className="px-5 py-3.5 text-xs text-stone-700 font-medium">
+                      {p.category ?? 'Uncategorized'}
+                    </td>
+
+                    {/* Origin */}
+                    <td className="px-5 py-3.5 text-xs text-stone-600">
+                      {ORIGIN_MAP[p.name] ?? 'Punjab, Pakistan'}
+                    </td>
+
+                    {/* Price */}
+                    <td className="px-5 py-3.5 font-bold text-stone-900 whitespace-nowrap">
+                      {formatPKR(p.price_in_paisa)}
+                    </td>
+
+                    {/* Stock */}
+                    <td className="px-5 py-3.5">
+                      <span className={`font-semibold text-sm ${
+                        p.stock_quantity === 0
+                          ? 'text-rose-600'
+                          : p.stock_quantity < 10
+                            ? 'text-amber-600'
+                            : 'text-stone-700'
+                      }`}>
+                        {p.stock_quantity} units
+                      </span>
+                    </td>
+
+                    {/* Actions */}
+                    <td className="px-5 py-3.5 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => { clearMutateError(); setEditProduct(p); }}
+                          className="p-1.5 rounded-lg hover:bg-stone-100 text-stone-500 hover:text-stone-800 transition"
+                          title="Edit product"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => { setDeleteError(null); setDeleteTarget(p); }}
+                          className="p-1.5 rounded-lg hover:bg-rose-50 text-stone-400 hover:text-rose-600 transition"
+                          title="Delete product"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
             </table>
           </div>
 
           {/* Pagination */}
-          {catalog.last_page > 1 && (
-            <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100 text-sm text-slate-500">
+          {(catalog.last_page ?? 1) > 1 && (
+            <div className="flex items-center justify-between px-5 py-3 border-t border-stone-100 text-xs text-stone-500">
               <span>Page {catalog.current_page} of {catalog.last_page}</span>
               <div className="flex gap-2">
                 <button
                   onClick={() => setPage(p => Math.max(1, p - 1))}
                   disabled={page <= 1}
-                  className="px-3 py-1 border rounded-lg disabled:opacity-40 hover:bg-slate-50 transition"
+                  className="px-3 py-1.5 border border-stone-200 rounded-lg disabled:opacity-40 hover:bg-stone-50 transition"
                 >
                   Prev
                 </button>
                 <button
                   onClick={() => setPage(p => Math.min(catalog.last_page, p + 1))}
                   disabled={page >= catalog.last_page}
-                  className="px-3 py-1 border rounded-lg disabled:opacity-40 hover:bg-slate-50 transition"
+                  className="px-3 py-1.5 border border-stone-200 rounded-lg disabled:opacity-40 hover:bg-stone-50 transition"
                 >
                   Next
                 </button>
@@ -394,9 +534,9 @@ export const AdminProductsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Create Modal */}
+      {/* ── Create Modal ── */}
       {showCreate && (
-        <Modal title="Create Product" onClose={() => setShowCreate(false)}>
+        <ProductModal title="Add New Artisan Product" onClose={() => setShowCreate(false)}>
           <ProductForm
             onSubmit={handleCreate}
             onCancel={() => setShowCreate(false)}
@@ -404,12 +544,12 @@ export const AdminProductsPage: React.FC = () => {
             busy={mutating}
             serverError={mutateError}
           />
-        </Modal>
+        </ProductModal>
       )}
 
-      {/* Edit Modal */}
+      {/* ── Edit Modal ── */}
       {editProduct && (
-        <Modal title="Edit Product" onClose={() => setEditProduct(null)}>
+        <ProductModal title="Edit Artisan Product" onClose={() => setEditProduct(null)}>
           <ProductForm
             initial={{
               name: editProduct.name,
@@ -424,17 +564,18 @@ export const AdminProductsPage: React.FC = () => {
             submitLabel="Save Changes"
             busy={mutating}
             serverError={mutateError}
+            isEdit
           />
-        </Modal>
+        </ProductModal>
       )}
 
-      {/* Delete Confirm Modal */}
+      {/* ── Delete Confirm Modal ── */}
       {deleteTarget && (
-        <Modal title="Delete Product" onClose={() => setDeleteTarget(null)}>
+        <ProductModal title="Delete Product" onClose={() => setDeleteTarget(null)}>
           <div className="space-y-4">
-            <p className="text-sm text-slate-600">
-              Are you sure you want to delete{' '}
-              <span className="font-semibold text-slate-800">{deleteTarget.name}</span>?
+            <p className="text-sm text-stone-600">
+              Are you sure you want to permanently delete{' '}
+              <span className="font-semibold text-stone-900">{deleteTarget.name}</span>?
               This action cannot be undone.
             </p>
             {deleteError && (
@@ -443,25 +584,27 @@ export const AdminProductsPage: React.FC = () => {
                 {deleteError}
               </div>
             )}
-            <div className="flex gap-3">
+            <div className="flex gap-3 pt-2 border-t border-stone-100">
               <button
+                type="button"
                 onClick={() => setDeleteTarget(null)}
-                className="flex-1 py-2 border border-slate-300 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-50 transition"
+                className="flex-1 py-2.5 border border-stone-300 rounded-lg text-sm font-medium text-stone-700 hover:bg-stone-50 transition cursor-pointer"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleDelete}
                 disabled={mutating}
-                className="flex-1 py-2 bg-red-600 text-white rounded-lg text-sm font-semibold hover:bg-red-700 disabled:opacity-60 transition flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 bg-rose-600 text-white rounded-lg text-sm font-bold hover:bg-rose-700 disabled:opacity-60 transition flex items-center justify-center gap-2 cursor-pointer"
               >
                 {mutating && <Loader2 className="w-4 h-4 animate-spin" />}
                 Delete
               </button>
             </div>
           </div>
-        </Modal>
+        </ProductModal>
       )}
-    </div>
+    </AdminLayout>
   );
 };

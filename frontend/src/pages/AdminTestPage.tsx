@@ -68,7 +68,7 @@ export const AdminTestPage: React.FC = () => {
               <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-bold ${
                 user?.role === 'admin'
                   ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                  : 'bg-indigo-100 text-indigo-800 border border-indigo-200'
+                  : 'bg-emerald-100 text-emerald-800 border border-emerald-200'
               }`}>
                 Role: {user?.role}
               </span>
